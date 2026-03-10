@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#fde0ff", "background-light": "#f8f5f8", "background-dark": "#220f23", "accent-pink": "#fce4ec", "text-main": "#0c151d", "text-sub": "#4574a1"}, fontFamily: {display: "Plus Jakarta Sans"}, borderRadius: {DEFAULT: "0.5rem", lg: "1rem", xl: "1.5rem", full: "9999px"}}}};</script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-main min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col max-w-md mx-auto overflow-x-hidden">
+<!-- Top Navigation -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="text-text-main dark:text-slate-100 flex size-12 shrink-0 items-center justify-center cursor-pointer">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</div>
+<h2 class="text-text-main dark:text-slate-100 text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">NavJeevan</h2>
+</div>
+<!-- Header -->
+<div class="px-6 py-8">
+<h2 class="text-text-main dark:text-slate-100 tracking-tight text-3xl font-bold leading-tight text-center">Select Your Role</h2>
+<p class="text-text-sub text-center mt-2 text-sm">Choose how you'd like to use the platform today</p>
+</div>
+<!-- Role Cards -->
+<div class="flex flex-col gap-4 px-4 pb-10">
+<!-- Mother Seeking Help -->
+<div class="group cursor-pointer">
+<div class="flex items-stretch justify-between gap-4 rounded-xl bg-accent-pink p-5 shadow-sm border border-pink-100 transition-all hover:shadow-md">
+<div class="flex flex-col gap-2 flex-[2_2_0px]">
+<p class="text-text-main text-lg font-bold leading-tight">Mother Seeking Help</p>
+<p class="text-slate-600 text-sm font-normal leading-snug">Confidential assistance, counseling, and NGO discovery</p>
+</div>
+<div class="w-24 h-24 bg-center bg-no-repeat bg-cover rounded-xl shrink-0" data-alt="Supportive hands holding a blooming flower" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDmlOJAuPxFUwsOBrDphRfpLWN-0lbv8jPx1Ku_CE-GvewzTzLwBWdskMaodsh4DIziVod9ZZUrmcGvjoZpDTo4J6EXMP0rOaCZkbha8t-137qNS8It903rt6tRzyj8qD_f9S4ivCK8iahBJgp4_giDFFp-8BiMgkQT0ceEm9zqDHjdrOcpb-RaMxK0S4e9Gl8RqFSdL-Sv8UarB4_9-znwzjqDazRtUaG8YZofUK-F8V1_eXr8hUXois-MkQdS-BCCB3TpP_kjwNd4");'></div>
+</div>
+</div>
+<!-- Adoptive Parent -->
+<div class="group cursor-pointer">
+<div class="flex items-stretch justify-between gap-4 rounded-xl bg-primary/40 p-5 shadow-sm border border-primary/50 transition-all hover:shadow-md">
+<div class="flex flex-col gap-2 flex-[2_2_0px]">
+<p class="text-text-main text-lg font-bold leading-tight">Adoptive Parent</p>
+<p class="text-text-sub text-sm font-normal leading-snug">Legal adoption registration and document tracking</p>
+</div>
+<div class="w-24 h-24 bg-center bg-no-repeat bg-cover rounded-xl shrink-0" data-alt="Happy family silhouette at sunset background" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD-hlH2QH8F1LNiRXU0_7M_QzoVU5ZCBaf9PpIC3gV1e_AEIT7V5SI_4tVdMJUlSdRLZyq5eFL1PKijj6iWGrUBcDKjDjFU4kRisH9LX5-TFtsdSaH3JaVUstSU4EPn0MBIDFyURNKe6v-ZnnE_TiXS2pioWZn4kdO7x6v83fAohDY420E9hQCsu1ZwgVgC8QN4BVJbM_SLV4lhL0s3nL7ff08KhpDFQsnnnvSXokrpzZTLvaFgLqy1bXP1MioyRMIhDuAZBrJWpGew");'></div>
+</div>
+</div>
+<!-- Adoption Agency / NGO -->
+<div class="group cursor-pointer">
+<div class="flex items-stretch justify-between gap-4 rounded-xl bg-accent-pink p-5 shadow-sm border border-pink-100 transition-all hover:shadow-md">
+<div class="flex flex-col gap-2 flex-[2_2_0px]">
+<p class="text-text-main text-lg font-bold leading-tight">Adoption Agency / NGO</p>
+<p class="text-slate-600 text-sm font-normal leading-snug">Manage mother requests and coordinate support</p>
+</div>
+<div class="w-24 h-24 bg-center bg-no-repeat bg-cover rounded-xl shrink-0" data-alt="Group of volunteers working together illustration" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuARV3pglmgxghqCgnHL47WGHUaNsb06JYAIUWRhfX3blz6pP-Oe-Y-uicpWEUHTb41cPSM4Vo-LCZV1_912cuLYPTW-uwT8aFB1oII-3m0Z_IBp_ulKSvZ22zlsASULnlDmRPWjEbKuF2qDPiEJPseK1IJUxVJB3kqx4-X56qyjd43A0cMu6CwyDZXok8cSr93OckX_-lZ0MZVnvQUXyyr9UpusxdPWRQaaGDgN_GysOSMIlUZIU_tzM_DnSx0qbRW2AwXk5bvhOun3");'></div>
+</div>
+</div>
+<!-- Government Admin -->
+<div class="group cursor-pointer">
+<div class="flex items-stretch justify-between gap-4 rounded-xl bg-primary/40 p-5 shadow-sm border border-primary/50 transition-all hover:shadow-md">
+<div class="flex flex-col gap-2 flex-[2_2_0px]">
+<p class="text-text-main text-lg font-bold leading-tight">Government Admin</p>
+<p class="text-text-sub text-sm font-normal leading-snug">Analytics, welfare monitoring, and AI risk prediction</p>
+</div>
+<div class="w-24 h-24 bg-center bg-no-repeat bg-cover rounded-xl shrink-0" data-alt="Business analytics dashboard conceptual visual" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDOxhf0cGWkJ5F8gDWsofBL9G16Y1nHJ6JcQeWTNcwuAUlQihay5_CiKU2PI5-BOrBzvb9Zp_VbgUsqa4x5WmjPF_-iaObvb_ajcQislDarrVrX65NfgfC1WTiot8sBUgZ5TMQ5gUQtj_DXgUreB68ozQZSN-5mxohyL8CUGI--WfUsurhM-bfgqn0_Zpo_9GJQmJvQIWz5WoSm_UAjyuT7E9qG9qVw1o8uHkV18x0Dg-zBkWIiSpjgYLMgKuYDIdHURZlHDdoBCoKX");'></div>
+</div>
+</div>
+</div>
+<!-- Trust Badges -->
+<div class="mt-auto pb-12 px-6">
+<div class="flex items-center justify-center gap-6 py-6 border-t border-slate-200 dark:border-slate-800">
+<div class="flex flex-col items-center gap-1">
+<div class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-text-sub">
+<span class="material-symbols-outlined">shield_person</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-wider text-text-sub">Anonymous</span>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-text-sub">
+<span class="material-symbols-outlined">verified</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-wider text-text-sub">CARA Aligned</span>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-text-sub">
+<span class="material-symbols-outlined">lock</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-wider text-text-sub">Safe &amp; Secure</span>
+</div>
+</div>
+</div>
+</div>
+</body></html>

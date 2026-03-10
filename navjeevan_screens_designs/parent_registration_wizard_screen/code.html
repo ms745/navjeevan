@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#e0f0ff",
+                        "accent-pink": "#fbcfe8",
+                        "accent-pink-dark": "#f472b6",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#0f1923",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>Adoptive Parent Registration - Step 4</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-gradient-to-b from-primary to-white min-h-screen flex flex-col text-slate-900">
+<!-- Header Section -->
+<header class="flex items-center px-6 py-4 justify-between bg-white/60 backdrop-blur-md sticky top-0 z-10 border-b border-primary">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-accent-pink-dark">restore</span>
+<h1 class="text-lg font-bold tracking-tight text-slate-800">HeartHome</h1>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-500">account_circle</span>
+<span class="text-sm font-medium text-slate-600">Sarah M.</span>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 max-w-2xl mx-auto w-full px-4 pt-6 pb-24">
+<!-- Navigation/Back -->
+<div class="flex items-center mb-6">
+<button class="flex items-center text-slate-500 hover:text-slate-800 transition-colors">
+<span class="material-symbols-outlined mr-1">arrow_back</span>
+<span class="text-sm font-semibold">Previous Step</span>
+</button>
+</div>
+<!-- Progress Header -->
+<div class="bg-white rounded-xl p-6 shadow-sm border border-primary/50 mb-6">
+<div class="flex justify-between items-end mb-4">
+<div>
+<h2 class="text-2xl font-extrabold text-slate-900 mb-1">Secure Document Upload</h2>
+<p class="text-slate-500 text-sm">Step 4 of 5: Finalizing your verification</p>
+</div>
+<div class="text-right">
+<span class="text-sm font-bold text-accent-pink-dark">80% Complete</span>
+</div>
+</div>
+<!-- Progress Bar -->
+<div class="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-accent-pink-dark rounded-full" style="width: 80%;"></div>
+</div>
+<!-- Stepper Dots -->
+<div class="flex justify-center gap-3 mt-4">
+<div class="h-2 w-2 rounded-full bg-accent-pink-dark"></div>
+<div class="h-2 w-2 rounded-full bg-accent-pink-dark"></div>
+<div class="h-2 w-2 rounded-full bg-accent-pink-dark"></div>
+<div class="h-2 w-6 rounded-full bg-accent-pink-dark"></div>
+<div class="h-2 w-2 rounded-full bg-slate-200"></div>
+</div>
+</div>
+<!-- Upload Sections -->
+<div class="space-y-4">
+<!-- Item 1: Govt ID -->
+<div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col gap-4">
+<div class="flex items-start justify-between">
+<div class="flex gap-4">
+<div class="bg-primary/30 p-3 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-700">badge</span>
+</div>
+<div>
+<h3 class="font-bold text-slate-800">Government Issued ID</h3>
+<p class="text-xs text-slate-500">Passport, Driver's License, or National ID</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-green-500">check_circle</span>
+</div>
+<div class="flex items-center justify-between border-t border-slate-50 pt-4 mt-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-sm">description</span>
+<span class="text-sm text-slate-600 font-medium">passport_copy.pdf</span>
+</div>
+<button class="text-xs font-bold text-slate-400 hover:text-red-400">Remove</button>
+</div>
+</div>
+<!-- Item 2: Income Proof -->
+<div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col gap-4">
+<div class="flex items-start justify-between">
+<div class="flex gap-4">
+<div class="bg-primary/30 p-3 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-700">payments</span>
+</div>
+<div>
+<h3 class="font-bold text-slate-800">Proof of Income</h3>
+<p class="text-xs text-slate-500">Latest 3 paystubs or tax returns</p>
+</div>
+</div>
+<span class="text-xs font-bold text-slate-400">Required</span>
+</div>
+<div class="border-2 border-dashed border-primary rounded-xl p-8 flex flex-col items-center justify-center gap-2 bg-slate-50/50 hover:bg-primary/10 transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-accent-pink-dark text-3xl">cloud_upload</span>
+<p class="text-sm font-medium text-slate-700">Click to upload or drag and drop</p>
+<p class="text-[10px] text-slate-400 uppercase tracking-widest">PDF, JPG, PNG (Max 10MB)</p>
+</div>
+</div>
+<!-- Item 3: Home Cert -->
+<div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col gap-4">
+<div class="flex items-start justify-between">
+<div class="flex gap-4">
+<div class="bg-primary/30 p-3 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-700">home_work</span>
+</div>
+<div>
+<h3 class="font-bold text-slate-800">Home Study Certificate</h3>
+<p class="text-xs text-slate-500">Official certificate from your social worker</p>
+</div>
+</div>
+<span class="text-xs font-bold text-slate-400">Required</span>
+</div>
+<div class="border-2 border-dashed border-primary rounded-xl p-8 flex flex-col items-center justify-center gap-2 bg-slate-50/50 hover:bg-primary/10 transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-accent-pink-dark text-3xl">add_circle</span>
+<p class="text-sm font-medium text-slate-700">Upload Certificate</p>
+</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="mt-8 space-y-3">
+<button class="w-full bg-accent-pink text-slate-800 font-bold py-4 rounded-xl shadow-lg shadow-pink-100 hover:bg-accent-pink-dark hover:text-white transition-all">
+                Save &amp; Continue to Next Step
+            </button>
+<button class="w-full bg-white text-slate-500 font-bold py-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all">
+                Save for Later
+            </button>
+</div>
+<div class="mt-8 flex items-center justify-center gap-2 text-slate-400">
+<span class="material-symbols-outlined text-sm">lock</span>
+<p class="text-[11px] font-medium uppercase tracking-widest">Encrypted &amp; Secure Data Handling</p>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-2 py-3 z-20">
+<div class="max-w-2xl mx-auto flex justify-around">
+<a class="flex flex-col items-center gap-1 text-accent-pink-dark" href="#">
+<span class="material-symbols-outlined">assignment</span>
+<span class="text-[10px] font-bold">Registration</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors" href="#">
+<span class="material-symbols-outlined">query_stats</span>
+<span class="text-[10px] font-bold">Status</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="text-[10px] font-bold">Guidance</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors" href="#">
+<span class="material-symbols-outlined">forum</span>
+<span class="text-[10px] font-bold">Support</span>
+</a>
+</div>
+</nav>
+</body></html>

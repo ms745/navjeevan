@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3b82f6", // Light Blue as Primary
+                        "secondary": "#f472b6", // Pink
+                        "background-light": "#f8fafd",
+                        "background-dark": "#0f172a",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header -->
+<header class="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center p-4 justify-between max-w-lg mx-auto w-full">
+<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+<span class="material-symbols-outlined">menu</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Welfare Monitoring</h1>
+<button class="relative flex size-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-300">notifications</span>
+<span class="absolute top-2.5 right-2.5 flex h-2 w-2 rounded-full bg-secondary"></span>
+</button>
+</div>
+<!-- Tabs -->
+<div class="max-w-lg mx-auto w-full">
+<div class="flex border-b border-slate-100 dark:border-slate-800 px-4">
+<a class="flex-1 flex flex-col items-center justify-center border-b-2 border-primary text-primary pb-3 pt-4" href="#">
+<p class="text-sm font-bold">All Cases</p>
+</a>
+<a class="flex-1 flex flex-col items-center justify-center border-b-2 border-transparent text-slate-500 dark:text-slate-400 pb-3 pt-4" href="#">
+<p class="text-sm font-medium">High Risk</p>
+</a>
+<a class="flex-1 flex flex-col items-center justify-center border-b-2 border-transparent text-slate-500 dark:text-slate-400 pb-3 pt-4" href="#">
+<p class="text-sm font-medium">Updates</p>
+</a>
+</div>
+</div>
+</header>
+<main class="flex-1 max-w-lg mx-auto w-full p-4 space-y-4">
+<!-- Search Bar -->
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-3 bg-white dark:bg-slate-800 border-none rounded-xl text-sm placeholder-slate-400 focus:ring-2 focus:ring-primary/50 shadow-sm" placeholder="Search Child ID or Family" type="text"/>
+</div>
+<div class="flex items-center justify-between pt-2">
+<h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">Active Cases</h3>
+<span class="text-xs font-semibold px-2 py-1 bg-primary/10 text-primary rounded-lg">24 Total</span>
+</div>
+<!-- Welfare Cards -->
+<div class="space-y-4">
+<!-- Card 1: High Risk -->
+<div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700/50">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-3">
+<div class="h-12 w-12 rounded-full bg-slate-200 overflow-hidden">
+<img class="h-full w-full object-cover" data-alt="Portrait of a young child smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtMRSiwc6tfQm6kAMmS7fqG8yV1bUtAKqiBy45ezFMFG7u4a44p_pXdy_RLhg9xSp9iXvHgFFOit7w7rpYusS3Uj5ML7328WYnUxzEBzd8NN-DsOURnaUvBgbR6cPqz1b83C-yhlOh-lK6hSwnzqdQ1fnqiMul5NFQSE9MUtPrLsEQnjJlT8Ae9SWWHE0L5sV94pTBja5ITFUEy1M1-x0Ew20Az0uRGvrU2GU2-UoG1pp16ckNkGa26U0J9JayqD2bkZ53IW8g14Lu"/>
+</div>
+<div>
+<p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Child ID: #8821</p>
+<h4 class="font-bold text-slate-800 dark:text-white">Assigned: Thompson Family</h4>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-2xl font-black text-secondary">42</span>
+<span class="text-[10px] font-bold text-secondary uppercase">Welfare Score</span>
+</div>
+</div>
+<!-- Score Gauge -->
+<div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 42%"></div>
+</div>
+<div class="flex justify-between mt-3 items-center">
+<span class="text-xs text-slate-500">Last visit: 2 days ago</span>
+<button class="px-3 py-1.5 bg-secondary/10 text-secondary text-xs font-bold rounded-lg">Action Required</button>
+</div>
+</div>
+<!-- Card 2: Stable -->
+<div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700/50">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-3">
+<div class="h-12 w-12 rounded-full bg-slate-200 overflow-hidden">
+<img class="h-full w-full object-cover" data-alt="A young girl in a pink shirt" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgx-0_6CZWDZF_9zF5ggcBHlkOU9-1Dr2esQhQUt9DWvkOSiTtx6xTg_lxVi6YwPXPz8tz_YR0Jl3WgrIjZa0iwMRUmWsBVQz1beca_J17O4vLRhzPOT87H0qeiBsh5bBKk4HlBPZHCSJmOpdXmZyQ4yW7k_-Zt4JmjV4ZdXY1Y_ROfiEFqQms1dYtsCl8sRgc_mo9vCavBbSUtOLVt5RyGodHTsj3KaFqCJMlpFZvYF6BAOREWm1MYfJZxNaQBtgwQzLa1KXeLsz3"/>
+</div>
+<div>
+<p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Child ID: #9012</p>
+<h4 class="font-bold text-slate-800 dark:text-white">Assigned: Miller Residence</h4>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-2xl font-black text-primary">89</span>
+<span class="text-[10px] font-bold text-primary uppercase">Welfare Score</span>
+</div>
+</div>
+<!-- Score Gauge -->
+<div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 89%"></div>
+</div>
+<div class="flex justify-between mt-3 items-center">
+<span class="text-xs text-slate-500">Last visit: 1 week ago</span>
+<button class="px-3 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-lg">View Profile</button>
+</div>
+</div>
+<!-- Card 3: Moderate -->
+<div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700/50">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-3">
+<div class="h-12 w-12 rounded-full bg-slate-200 overflow-hidden">
+<img class="h-full w-full object-cover" data-alt="A young boy playing outside" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOiNOqkF8Bicc4jwxUEbBfRlDvElifAMlv8XHDOGvBTOTaMvqLWtIyW2fg3DCF0_JYiP0ThdEsglOG7uuPVWLTX-jhxPmqIGIowia0d3P6rbTUZ6c1F2r-x5gEy0fFKmzW5rE_hqbl9TIudKl1-6E-fiAmOIPJe8BCaBuH5hJZLL3x5y_otJCWf8dMssz0XfwXR_ibH0YNaphv5dxuljaj5g9TPb-QEzYVVXC4p1g50-0J9Gx8g9h1TmMgPQgiwdkjojMw817yVUXq"/>
+</div>
+<div>
+<p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Child ID: #7743</p>
+<h4 class="font-bold text-slate-800 dark:text-white">Assigned: Davies Home</h4>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-2xl font-black text-amber-500">67</span>
+<span class="text-[10px] font-bold text-amber-500 uppercase">Welfare Score</span>
+</div>
+</div>
+<!-- Score Gauge -->
+<div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+<div class="bg-amber-500 h-full rounded-full" style="width: 67%"></div>
+</div>
+<div class="flex justify-between mt-3 items-center">
+<span class="text-xs text-slate-500">Last visit: Today</span>
+<button class="px-3 py-1.5 bg-amber-500/10 text-amber-500 text-xs font-bold rounded-lg">Follow Up</button>
+</div>
+</div>
+<!-- Card 4: New Entry -->
+<div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700/50">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-3">
+<div class="h-12 w-12 rounded-full bg-slate-200 overflow-hidden">
+<img class="h-full w-full object-cover" data-alt="Close up of a smiling toddler" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2DyN2v8ioE12PtlUMsBkMQQKdC3y7MOgc3fK8muWjxBppWs6q2f7Q4gMA_FFWq_NgKt27egxw5-7KfFeCTsVT7ehhNWCtYqW6JdWMUGwLPcEMW3NE6k-v5e_I_FGPIRqAr5qjQAMj4Ao8uWp6EpzGRlLfFC2Bc-QCrxpfGniu4Y6YrcRDgl_VIlPhlYBOH1SThebL-gA1Ab-KznmQcoIXWf7cQC-D4JjeL9CVn3DhpTYdpqmSq1Bjo-g8_iS28HCYLrLw2X4rmX7k"/>
+</div>
+<div>
+<p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Child ID: #9255</p>
+<h4 class="font-bold text-slate-800 dark:text-white">Assigned: Henderson Care</h4>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-2xl font-black text-primary">94</span>
+<span class="text-[10px] font-bold text-primary uppercase">Welfare Score</span>
+</div>
+</div>
+<!-- Score Gauge -->
+<div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 94%"></div>
+</div>
+<div class="flex justify-between mt-3 items-center">
+<span class="text-xs text-slate-500">Last visit: 3 days ago</span>
+<button class="px-3 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-lg">View Profile</button>
+</div>
+</div>
+</div>
+<!-- Bottom Spacer for Nav -->
+<div class="h-20"></div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 pb-6 pt-2 z-50">
+<div class="flex max-w-lg mx-auto justify-between items-center">
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 flex-1" href="#">
+<span class="material-symbols-outlined">content_paste</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Requests</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary flex-1" href="#">
+<span class="material-symbols-outlined fill-icon">monitoring</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Welfare</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 flex-1" href="#">
+<span class="material-symbols-outlined">groups</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Counselors</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 flex-1" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Profile</p>
+</a>
+</div>
+</nav>
+</body></html>

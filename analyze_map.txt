@@ -1,0 +1,7 @@
+Analyzing ngo_support_map_screen.dart...                        
+
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\mother\ngo_support_map_screen.dart:209:31 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\mother\ngo_support_map_screen.dart:375:25 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\mother\ngo_support_map_screen.dart:412:62 - deprecated_member_use
+
+3 issues found. (ran in 3.9s)

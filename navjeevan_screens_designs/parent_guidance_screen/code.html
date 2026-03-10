@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NavJeevan Parent Guidance Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#e0f0ff", // Light Blue
+                        "accent-pink": "#fce4ec", // Soft Pink
+                        "text-main": "#1e293b",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#0f1923",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
+<div class="relative flex min-h-screen w-full flex-col max-w-md mx-auto bg-white shadow-xl overflow-hidden">
+<!-- Header -->
+<header class="flex items-center bg-white dark:bg-slate-900 px-4 py-4 justify-between border-b border-slate-100">
+<div class="flex items-center gap-3">
+<div class="p-2 rounded-lg bg-primary/30">
+<span class="material-symbols-outlined text-blue-600">arrow_back</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight">Parent Guidance Hub</h1>
+</div>
+<button class="p-2 rounded-lg hover:bg-slate-50">
+<span class="material-symbols-outlined text-slate-500">info</span>
+</button>
+</header>
+<!-- Content Area -->
+<main class="flex-1 overflow-y-auto pb-24">
+<!-- Hero Section -->
+<div class="p-6 bg-gradient-to-br from-primary/40 to-accent-pink/40">
+<h2 class="text-2xl font-bold leading-tight mb-2">Your Adoption Journey</h2>
+<p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                    Comprehensive resources to guide you through every step of the adoption process with NavJeevan. We're here for you.
+                </p>
+</div>
+<!-- Stats/Status Quick View -->
+<div class="flex gap-3 px-6 -mt-4">
+<div class="flex-1 bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center">
+<span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Progress</span>
+<span class="text-lg font-bold text-blue-600">Step 2/4</span>
+</div>
+<div class="flex-1 bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center">
+<span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Documents</span>
+<span class="text-lg font-bold text-pink-500">80% Ready</span>
+</div>
+</div>
+<!-- Resource Grid -->
+<div class="px-6 py-8">
+<h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Core Resources</h3>
+<div class="grid grid-cols-1 gap-4">
+<!-- Legal Requirements -->
+<div class="flex items-start gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+<span class="material-symbols-outlined" style="font-size: 28px;">gavel</span>
+</div>
+<div class="flex flex-col">
+<h4 class="text-base font-bold text-slate-900">Legal Requirements</h4>
+<p class="text-sm text-slate-500">Understand the legal framework, age criteria, and mandatory documents needed for registration.</p>
+</div>
+</div>
+<!-- Home Study Prep -->
+<div class="flex items-start gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-600">
+<span class="material-symbols-outlined" style="font-size: 28px;">home_health</span>
+</div>
+<div class="flex flex-col">
+<h4 class="text-base font-bold text-slate-900">Home Study Prep</h4>
+<p class="text-sm text-slate-500">Preparing your home, family interviews, and environmental safety checks for the official visit.</p>
+</div>
+</div>
+<!-- Post-Adoption Support -->
+<div class="flex items-start gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+<span class="material-symbols-outlined" style="font-size: 28px;">diversity_1</span>
+</div>
+<div class="flex flex-col">
+<h4 class="text-base font-bold text-slate-900">Post-Adoption Support</h4>
+<p class="text-sm text-slate-500">Connecting with expert counselors, pediatricians, and local parent support communities.</p>
+</div>
+</div>
+<!-- Financial Planning -->
+<div class="flex items-start gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+<span class="material-symbols-outlined" style="font-size: 28px;">account_balance_wallet</span>
+</div>
+<div class="flex flex-col">
+<h4 class="text-base font-bold text-slate-900">Financial Planning</h4>
+<p class="text-sm text-slate-500">Budgeting for legal fees, medical checkups, and planning for your future family's needs.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Support Banner -->
+<div class="mx-6 p-5 rounded-2xl bg-slate-900 text-white flex items-center justify-between">
+<div>
+<h5 class="font-bold">Need Personal Help?</h5>
+<p class="text-xs text-slate-400">Schedule a 1-on-1 session with a counselor.</p>
+</div>
+<button class="bg-primary px-4 py-2 rounded-full text-slate-900 text-xs font-bold">Book Now</button>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="absolute bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-100 px-4 pb-6 pt-2">
+<div class="flex justify-between items-center">
+<a class="flex flex-col items-center gap-1 flex-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">app_registration</span>
+<p class="text-[10px] font-semibold uppercase tracking-tighter">Registration</p>
+</a>
+<a class="flex flex-col items-center gap-1 flex-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<p class="text-[10px] font-semibold uppercase tracking-tighter">Status</p>
+</a>
+<a class="flex flex-col items-center gap-1 flex-1 text-blue-600" href="#">
+<div class="relative">
+<span class="material-symbols-outlined active-icon">menu_book</span>
+<div class="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full"></div>
+</div>
+<p class="text-[10px] font-bold uppercase tracking-tighter">Guidance</p>
+</a>
+<a class="flex flex-col items-center gap-1 flex-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">contact_support</span>
+<p class="text-[10px] font-semibold uppercase tracking-tighter">Support</p>
+</a>
+</div>
+</nav>
+</div>
+</body></html>

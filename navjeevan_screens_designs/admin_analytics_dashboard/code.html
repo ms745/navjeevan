@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pune Admin Analytics Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                        "brand-blue": "#e0f2fe",
+                        "brand-pink": "#fce7f3",
+                        "accent-pink": "#ec4899",
+                        "accent-blue": "#0ea5e9"
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Public Sans', sans-serif;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Header -->
+<header class="flex items-center bg-white dark:bg-slate-900 p-4 border-b border-slate-200 dark:border-slate-800 justify-between sticky top-0 z-10">
+<div class="flex items-center gap-3">
+<div class="bg-primary/10 p-2 rounded-lg text-primary">
+<span class="material-symbols-outlined">dashboard</span>
+</div>
+<div>
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">Pune Admin Analytics</h2>
+<p class="text-xs text-slate-500 dark:text-slate-400">Regional Overview &amp; Metrics</p>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="size-10 rounded-full bg-brand-pink flex items-center justify-center text-accent-pink font-bold border border-accent-pink/20">
+                    PA
+                </div>
+</div>
+</header>
+<main class="flex-1 pb-24">
+<!-- High Level Stats -->
+<div class="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-accent-blue">
+<span class="material-symbols-outlined">pending_actions</span>
+</div>
+<span class="text-emerald-500 text-sm font-semibold flex items-center">
+<span class="material-symbols-outlined text-sm">trending_up</span> 12%
+                        </span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mt-2">Total Requests</p>
+<p class="text-slate-900 dark:text-slate-100 tracking-tight text-3xl font-bold">1,284</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-brand-pink/50 dark:bg-pink-900/20 rounded-lg text-accent-pink">
+<span class="material-symbols-outlined">family_restroom</span>
+</div>
+<span class="text-emerald-500 text-sm font-semibold flex items-center">
+<span class="material-symbols-outlined text-sm">trending_up</span> 5%
+                        </span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mt-2">Verified Families</p>
+<p class="text-slate-900 dark:text-slate-100 tracking-tight text-3xl font-bold">856</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-primary/10 dark:bg-primary/20 rounded-lg text-primary">
+<span class="material-symbols-outlined">child_care</span>
+</div>
+<span class="text-emerald-500 text-sm font-semibold flex items-center">
+<span class="material-symbols-outlined text-sm">trending_up</span> 8%
+                        </span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mt-2">Children Placed</p>
+<p class="text-slate-900 dark:text-slate-100 tracking-tight text-3xl font-bold">342</p>
+</div>
+</div>
+<!-- Region-wise Chart Section -->
+<div class="px-4 py-4">
+<div class="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h2 class="text-slate-900 dark:text-slate-100 text-xl font-bold leading-tight">Region-wise Requests</h2>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Activity across Pune districts</p>
+</div>
+<div class="bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            Last 30 Days
+                        </div>
+</div>
+<div class="flex flex-col gap-2">
+<p class="text-slate-900 dark:text-slate-100 tracking-tight text-4xl font-extrabold truncate">1,284</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal mb-8">Total regional submissions</p>
+<div class="grid min-h-[220px] grid-flow-col gap-4 sm:gap-8 grid-rows-[1fr_auto] items-end justify-items-center">
+<!-- Hadapsar -->
+<div class="w-full max-w-[40px] flex flex-col justify-end h-full">
+<div class="bg-accent-blue rounded-t-lg w-full transition-all duration-300 hover:opacity-80" style="height: 85%;"></div>
+</div>
+<!-- Baner -->
+<div class="w-full max-w-[40px] flex flex-col justify-end h-full">
+<div class="bg-accent-pink rounded-t-lg w-full transition-all duration-300 hover:opacity-80" style="height: 70%;"></div>
+</div>
+<!-- Kothrud -->
+<div class="w-full max-w-[40px] flex flex-col justify-end h-full">
+<div class="bg-primary rounded-t-lg w-full transition-all duration-300 hover:opacity-80" style="height: 45%;"></div>
+</div>
+<!-- Wakad -->
+<div class="w-full max-w-[40px] flex flex-col justify-end h-full">
+<div class="bg-accent-blue rounded-t-lg w-full transition-all duration-300 hover:opacity-80" style="height: 90%;"></div>
+</div>
+<!-- Viman Nagar -->
+<div class="w-full max-w-[40px] flex flex-col justify-end h-full">
+<div class="bg-accent-pink rounded-t-lg w-full transition-all duration-300 hover:opacity-80" style="height: 55%;"></div>
+</div>
+<!-- Hinjewadi -->
+<div class="w-full max-w-[40px] flex flex-col justify-end h-full">
+<div class="bg-slate-300 dark:bg-slate-700 rounded-t-lg w-full transition-all duration-300 hover:opacity-80" style="height: 30%;"></div>
+</div>
+<!-- Labels -->
+<p class="text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">Hadapsar</p>
+<p class="text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">Baner</p>
+<p class="text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">Kothrud</p>
+<p class="text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">Wakad</p>
+<p class="text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">Viman</p>
+<p class="text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">Hinje</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Additional Detail Table -->
+<div class="px-4 py-2">
+<div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+<h3 class="font-bold text-slate-900 dark:text-slate-100">Recent Verification Tasks</h3>
+<button class="text-primary text-sm font-semibold">View All</button>
+</div>
+<div class="divide-y divide-slate-100 dark:divide-slate-800">
+<div class="p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-brand-blue flex items-center justify-center text-accent-blue">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div>
+<p class="font-semibold text-sm">Sharma Family</p>
+<p class="text-xs text-slate-500">Baner • 2 hours ago</p>
+</div>
+</div>
+<span class="px-2 py-1 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-700">Pending</span>
+</div>
+<div class="p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-brand-pink flex items-center justify-center text-accent-pink">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div>
+<p class="font-semibold text-sm">Deshpande Family</p>
+<p class="text-xs text-slate-500">Kothrud • 5 hours ago</p>
+</div>
+</div>
+<span class="px-2 py-1 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700">Verified</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 px-4 pb-6 pt-3">
+<div class="flex justify-around items-center max-w-lg mx-auto">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-1">bar_chart</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Analytics</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Verification</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">AI Risk</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Reports</span>
+</a>
+</div>
+</nav>
+</div>
+</body></html>

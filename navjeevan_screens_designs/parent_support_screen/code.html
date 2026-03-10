@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NavJeevan Parent Support</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#e0f0ff", // Light Blue
+                        "secondary": "#fce4ec", // Soft Pink
+                        "accent-pink": "#f06292",
+                        "accent-blue": "#4574a1",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#0f1923",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Header -->
+<header class="flex items-center bg-white dark:bg-slate-900 p-4 sticky top-0 z-10 shadow-sm justify-between">
+<div class="flex items-center gap-2">
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-slate-700 dark:text-slate-300">arrow_back</span>
+</button>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-tight flex-1 text-center">Parent Support</h2>
+<div class="flex w-10 items-center justify-end">
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-slate-700 dark:text-slate-300">notifications</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 pb-24">
+<!-- Hero / Direct Support -->
+<section class="p-4">
+<div class="rounded-xl bg-gradient-to-br from-primary to-secondary p-6 shadow-sm border border-white/50">
+<h3 class="text-xl font-bold mb-2">Need immediate guidance?</h3>
+<p class="text-slate-700 mb-6 text-sm">Our adoption experts are available 9 AM - 6 PM to help you navigate your journey.</p>
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 bg-white text-slate-900 gap-3 text-base font-bold shadow-md hover:shadow-lg transition-all">
+<span class="material-symbols-outlined text-accent-blue">headset_mic</span>
+<span>Connect with an Adoption Expert</span>
+</button>
+</div>
+</section>
+<!-- Emergency Contact (CARA) -->
+<section class="px-4 mb-6">
+<div class="flex items-center justify-between gap-4 rounded-xl bg-rose-50 dark:bg-rose-950/20 p-4 border border-rose-100 dark:border-rose-900/30">
+<div class="flex gap-3 items-center">
+<div class="size-10 flex items-center justify-center rounded-full bg-rose-100 dark:bg-rose-900/50">
+<span class="material-symbols-outlined text-rose-600">emergency</span>
+</div>
+<div>
+<p class="text-rose-900 dark:text-rose-200 text-sm font-bold">CARA Helpline</p>
+<p class="text-rose-700 dark:text-rose-400 text-xs font-medium">1800-11-1311 (Toll Free)</p>
+</div>
+</div>
+<button class="bg-rose-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm">Call Now</button>
+</div>
+</section>
+<!-- Parent Support Groups -->
+<section class="px-4 mb-8">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold">Support Groups</h3>
+<button class="text-accent-blue font-semibold text-sm">See All</button>
+</div>
+<div class="space-y-4">
+<!-- Group Card 1 -->
+<div class="flex items-center gap-4 rounded-xl bg-white dark:bg-slate-900 p-3 shadow-sm border border-slate-100 dark:border-slate-800">
+<div class="size-20 bg-center bg-no-repeat bg-cover rounded-lg shrink-0" data-alt="Group of diverse parents smiling together in a circle" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCIQlZaBIpJ1ci7ST8aiGfUwnOLOCcdO5hBmHAtrmk46_FmfJDFPyScM8dklBiBneKDGBKfU_tOMbfLsTNhzwKM62vuj4BusrPv8eayu4s6adq1PsRUQmM_lBtOS_wwbge-jmi4w1JTrB24-H7pmZzfrq6BOQZNBq0QbQrHmabs-Dhm9ZEHmX20OymhHzkCLPyD3Es82NaI1VUQ2EpE4UVzs9IprohQeu9lD5rFeVTZ1BR3Vn7HccPt_hLGKvnOA8Kf_FPdC_9n_zpq");'></div>
+<div class="flex flex-col flex-1">
+<p class="text-slate-900 dark:text-slate-100 font-bold text-base">New Parents Circle</p>
+<p class="text-slate-500 text-xs mb-2">320 Members • Active Now</p>
+<button class="flex h-8 items-center justify-center rounded-lg bg-secondary text-accent-pink px-4 text-xs font-bold w-fit">
+                                Join Group
+                            </button>
+</div>
+</div>
+<!-- Group Card 2 -->
+<div class="flex items-center gap-4 rounded-xl bg-white dark:bg-slate-900 p-3 shadow-sm border border-slate-100 dark:border-slate-800">
+<div class="size-20 bg-center bg-no-repeat bg-cover rounded-lg shrink-0" data-alt="Two families sharing a meal outdoors" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCqj4wwwpiA9wR9AmbxTSiGdZRtbo7vXO7VbWCEZeNIlyUAR4Cpr5aA0Lh5AE4jPMvp-h65aUG8PX9pjTOhbXKp-OV0Zf4AGcf6Uit9LfbtYrCvGrNEaXbpNjz8BUteLjwfEThqKRvIWLSrYKlBk8P8y3qcmCsZ8udPjFUQq6idn1CjPkbRDS1cNt593xeeArZdlCkAxcCeS6CjHuIyUUwj1tDpOe0cnkPJv__o0yhRKeov_Ut8hxlA88JNpnL3gKPSu5igxv7LaEWv");'></div>
+<div class="flex flex-col flex-1">
+<p class="text-slate-900 dark:text-slate-100 font-bold text-base">Toddler Transitions</p>
+<p class="text-slate-500 text-xs mb-2">156 Members • Weekly Meetups</p>
+<button class="flex h-8 items-center justify-center rounded-lg bg-secondary text-accent-pink px-4 text-xs font-bold w-fit">
+                                Join Group
+                            </button>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ Section -->
+<section class="px-4 mb-4">
+<h3 class="text-lg font-bold mb-4">Frequently Asked Questions</h3>
+<div class="space-y-2">
+<details class="group bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+<summary class="flex items-center justify-between p-4 cursor-pointer list-none">
+<span class="font-semibold text-sm">How long does the post-adoption follow up last?</span>
+<span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="px-4 pb-4 text-sm text-slate-600 dark:text-slate-400">
+                            Post-adoption follow-up visits are typically conducted every six months for a period of two years after the legal adoption is finalized.
+                        </div>
+</details>
+<details class="group bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+<summary class="flex items-center justify-between p-4 cursor-pointer list-none">
+<span class="font-semibold text-sm">What documents are needed for registration?</span>
+<span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="px-4 pb-4 text-sm text-slate-600 dark:text-slate-400">
+                            Key documents include PAN card, birth certificates, proof of residence, health certificates, and income tax returns for the last three years.
+                        </div>
+</details>
+<details class="group bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+<summary class="flex items-center justify-between p-4 cursor-pointer list-none">
+<span class="font-semibold text-sm">Can I update my preferences after registration?</span>
+<span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="px-4 pb-4 text-sm text-slate-600 dark:text-slate-400">
+                            Yes, certain preferences can be updated through the CARINGS portal, but some changes might require a re-evaluation of the Home Study Report.
+                        </div>
+</details>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 pb-6 pt-2 z-20">
+<div class="flex justify-between items-center max-w-md mx-auto">
+<a class="flex flex-1 flex-col items-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">how_to_reg</span>
+</div>
+<p class="text-[10px] font-bold tracking-tight">Registration</p>
+</a>
+<a class="flex flex-1 flex-col items-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">analytics</span>
+</div>
+<p class="text-[10px] font-bold tracking-tight">Status</p>
+</a>
+<a class="flex flex-1 flex-col items-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">menu_book</span>
+</div>
+<p class="text-[10px] font-bold tracking-tight">Guidance</p>
+</a>
+<a class="flex flex-1 flex-col items-center gap-1 text-accent-blue" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined fill-1">handshake</span>
+</div>
+<p class="text-[10px] font-bold tracking-tight">Support</p>
+</a>
+</div>
+</nav>
+</div>
+</body></html>

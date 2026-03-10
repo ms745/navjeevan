@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin Family Verification Queue</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                        "brand-blue": "#e0f2fe",
+                        "brand-pink": "#fce7f3",
+                        "brand-accent-blue": "#0ea5e9",
+                        "brand-accent-pink": "#db2777"
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .active-tab { border-bottom: 3px solid #db2777; color: #db2777; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="relative flex min-h-screen w-full flex-col max-w-md mx-auto bg-white dark:bg-slate-900 shadow-xl overflow-x-hidden">
+<!-- Header -->
+<div class="flex items-center bg-white dark:bg-slate-900 p-4 pb-2 justify-between sticky top-0 z-10 border-b border-slate-100 dark:border-slate-800">
+<div class="text-slate-600 dark:text-slate-400 flex size-10 shrink-0 items-center justify-center cursor-pointer">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">Family Verification</h2>
+<div class="flex w-10 items-center justify-end">
+<button class="flex size-10 cursor-pointer items-center justify-center rounded-full bg-transparent text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined">search</span>
+</button>
+</div>
+</div>
+<!-- Status Tabs -->
+<div class="bg-white dark:bg-slate-900 sticky top-14 z-10">
+<div class="flex border-b border-slate-100 dark:border-slate-800 px-4 gap-6 overflow-x-auto no-scrollbar">
+<a class="flex flex-col items-center justify-center active-tab pb-3 pt-4 whitespace-nowrap" href="#">
+<p class="text-sm font-bold">Pending (12)</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-slate-500 pb-3 pt-4 whitespace-nowrap" href="#">
+<p class="text-sm font-bold">In Review</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-slate-500 pb-3 pt-4 whitespace-nowrap" href="#">
+<p class="text-sm font-bold">Approved</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-slate-500 pb-3 pt-4 whitespace-nowrap" href="#">
+<p class="text-sm font-bold">Rejected</p>
+</a>
+</div>
+</div>
+<!-- Filter Chips -->
+<div class="flex gap-3 p-4 overflow-x-auto no-scrollbar bg-slate-50/50 dark:bg-slate-800/50">
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-brand-pink text-brand-accent-pink px-4 border border-brand-accent-pink/20">
+<p class="text-xs font-semibold">Urgent</p>
+<span class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-brand-blue text-brand-accent-blue px-4 border border-brand-accent-blue/20">
+<p class="text-xs font-semibold">Newest First</p>
+<span class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-4 border border-slate-200 dark:border-slate-600">
+<p class="text-xs font-semibold">Home Study</p>
+<span class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+</button>
+</div>
+<!-- Verification List -->
+<div class="flex flex-col flex-1 p-4 gap-4 pb-24">
+<!-- Family Card 1 -->
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-4">
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-3">
+<img class="size-12 rounded-full object-cover ring-2 ring-brand-blue" data-alt="Happy smiling adoptive couple in backyard" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-ixILtUHMinsUQHZNYtE6CpSjeQ6iJLcsrVo_kTLx19rO0SjYX4F1HjGaZIPrSq8v_43B1TaBnrpcH_UsqP0AZ3HdpE_7POzX8DQ1F3Lilh5cGj1kKzdV14C-2zmifXA2jGkPhfgn6XFtdt_-t9vn096a537dF_JFCQv9fUdt6xanzJGg9wZNcsRvsRRKO4uGLY-fecNSyYIxiDr2K4qgkcfT5T5VM0hJAJNUZ44P_opX0blFKCzkYURu-X5HVfuv6t8Y9O04552M"/>
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">The Miller Family</h4>
+<p class="text-xs text-slate-500">Submitted 2 hours ago • <span class="text-brand-accent-pink font-medium">High Priority</span></p>
+</div>
+</div>
+<div class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Awaiting Review</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mb-4">
+<div class="bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+<p class="text-[10px] text-slate-400 uppercase font-bold">Location</p>
+<p class="text-xs font-medium">Austin, Texas</p>
+</div>
+<div class="bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+<p class="text-[10px] text-slate-400 uppercase font-bold">Documents</p>
+<p class="text-xs font-medium">8/10 Uploaded</p>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 bg-brand-blue hover:bg-brand-blue/80 text-brand-accent-blue py-2.5 rounded-lg text-xs font-bold transition-colors">Review Documents</button>
+<button class="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+<span class="material-symbols-outlined text-[20px] align-middle">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- Family Card 2 -->
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-4">
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-3">
+<img class="size-12 rounded-full object-cover ring-2 ring-brand-blue" data-alt="Portrait of a young diverse family" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUrylJOC9LSsaShEC_IwkrUap6KQseA-mGV6WNHwyLMTANbtkjJVlLNaIj37It3dKEoU0uPlhuC4BQ_elo0YuwcNZoSv8AcMuE42JbW0EQ8Lmz30Q5w47FbE9I4YcuEX9Pwg1pWuHmVOXlqvhK-6Z7GWlykZAmWKs2-7L-vah1687-ZmdW87OgApE5qyduwUeAo2gnMJMMPxf6fLtfZqsCu1oT5FbYae0cc89k7x9fWwPVEd0UGM-I_SoyMOh7diBl7Dcn1i7MgcAh"/>
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">Chen-Williams Family</h4>
+<p class="text-xs text-slate-500">Submitted yesterday • Standard</p>
+</div>
+</div>
+<div class="bg-blue-100 text-brand-accent-blue px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Home Study Ready</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mb-4">
+<div class="bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+<p class="text-[10px] text-slate-400 uppercase font-bold">Location</p>
+<p class="text-xs font-medium">Seattle, WA</p>
+</div>
+<div class="bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+<p class="text-[10px] text-slate-400 uppercase font-bold">Documents</p>
+<p class="text-xs font-medium">All Verified</p>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 bg-primary text-white py-2.5 rounded-lg text-xs font-bold shadow-sm shadow-primary/20">Final Approval</button>
+<button class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 py-2.5 rounded-lg text-xs font-bold">Reject</button>
+</div>
+</div>
+<!-- Family Card 3 -->
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-4">
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-3">
+<img class="size-12 rounded-full object-cover ring-2 ring-brand-blue" data-alt="Close up of a laughing couple holding hands" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBY0db_gr0JEO37efkPcN0pjU62Ipf37c07eNab6egfGj_DaUUR9i7z_abUBTcCy2GhspbFpZcRgd6uHGGoP8ZV6s3szm_qKmg3Y1ZPT3uUQdVmuj5KOSc5b1Fcpzc8_DPO27ZBoaNVejl15GWmZNfSOlb5UgX62AM2pSVcDryG10fuZNp1QHGtOii6z9CbmSMJQeMHCPXcOqHXVMZ2lrhphrgwuvw7DGHzE_E2uWFQ64vbfq4-5EL7ojlj8n6r9s4RGqVW9cvg0WpT"/>
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">The Garcia Family</h4>
+<p class="text-xs text-slate-500">Submitted 3 days ago • Standard</p>
+</div>
+</div>
+<div class="bg-orange-100 text-orange-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Update Requested</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mb-4">
+<div class="bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+<p class="text-[10px] text-slate-400 uppercase font-bold">Location</p>
+<p class="text-xs font-medium">Miami, Florida</p>
+</div>
+<div class="bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+<p class="text-[10px] text-slate-400 uppercase font-bold">Pending Item</p>
+<p class="text-xs font-medium text-brand-accent-pink">Background Check</p>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 bg-brand-blue text-brand-accent-blue py-2.5 rounded-lg text-xs font-bold transition-colors">Review Docs</button>
+<button class="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 rounded-lg">
+<span class="material-symbols-outlined text-[20px] align-middle">more_horiz</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation -->
+<div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-20">
+<div class="flex items-center border-t border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-2 pb-6 pt-3 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-slate-500" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">bar_chart</span>
+</div>
+<p class="text-[10px] font-medium leading-normal">Analytics</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-brand-accent-pink" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+</div>
+<p class="text-[10px] font-bold leading-normal">Verification</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-slate-500" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<p class="text-[10px] font-medium leading-normal">AI Risk</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-slate-500" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">description</span>
+</div>
+<p class="text-[10px] font-medium leading-normal">Reports</p>
+</a>
+</div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NGO Dashboard - Help Requests</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                        "agency-blue": "#e0f2fe",
+                        "agency-pink": "#fce7f3",
+                        "accent-blue": "#0284c7",
+                        "accent-pink": "#db2777",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Public Sans', sans-serif;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<header class="sticky top-0 z-10 flex items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md p-4 justify-between border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="bg-primary/10 p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary">diversity_1</span>
+</div>
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">Requests</h2>
+</div>
+<div class="flex gap-2">
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">search</span>
+</button>
+<button class="relative flex size-10 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">notifications</span>
+<span class="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-primary"></span>
+</button>
+</div>
+</header>
+<main class="flex-1 pb-24">
+<div class="bg-gradient-to-r from-agency-blue to-agency-pink p-6 mb-4">
+<div class="max-w-4xl mx-auto">
+<h1 class="text-2xl font-bold text-slate-800 mb-2">Welcome back, Sarah</h1>
+<p class="text-slate-600">You have 12 new help requests from mothers requiring immediate attention today.</p>
+</div>
+</div>
+<div class="px-4 mb-6">
+<div class="flex overflow-x-auto gap-2 no-scrollbar py-2">
+<button class="flex-shrink-0 px-4 py-2 rounded-full bg-primary text-white text-sm font-semibold">All Requests</button>
+<button class="flex-shrink-0 px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium">Urgent</button>
+<button class="flex-shrink-0 px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium">In Progress</button>
+<button class="flex-shrink-0 px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium">Resolved</button>
+</div>
+</div>
+<div class="px-4">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold text-slate-900 dark:text-slate-100">Incoming Help Requests</h3>
+<span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Showing 1-5 of 12</span>
+</div>
+<div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+<th class="px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300">ID</th>
+<th class="px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Region</th>
+<th class="px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Reason</th>
+<th class="px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Risk</th>
+<th class="px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300 text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">#MH-9021</td>
+<td class="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">North Highlands</td>
+<td class="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">Postpartum Support</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">High</span>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center justify-end gap-1 ml-auto">
+                                            Assign <span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">#MH-8843</td>
+<td class="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">East Riverside</td>
+<td class="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">Emergency Housing</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">Medium</span>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center justify-end gap-1 ml-auto">
+                                            Assign <span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">#MH-8712</td>
+<td class="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">South Bay</td>
+<td class="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">Nutrition Guidance</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Low</span>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center justify-end gap-1 ml-auto">
+                                            Assign <span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">#MH-8655</td>
+<td class="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">West Valley</td>
+<td class="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">Lactation Consult</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">Medium</span>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center justify-end gap-1 ml-auto">
+                                            Assign <span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">#MH-8540</td>
+<td class="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">Central Metro</td>
+<td class="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">Medical Supplies</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">High</span>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center justify-end gap-1 ml-auto">
+                                            Assign <span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 bg-slate-50 dark:bg-slate-800/50 flex justify-center">
+<button class="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">View All Requests</button>
+</div>
+</div>
+<div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-agency-blue rounded-xl p-4 flex items-center gap-4">
+<div class="size-12 rounded-full bg-white flex items-center justify-center text-accent-blue">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<div>
+<p class="text-sm font-medium text-slate-600">Active Counselors</p>
+<p class="text-2xl font-bold text-slate-900">24 Online</p>
+</div>
+</div>
+<div class="bg-agency-pink rounded-xl p-4 flex items-center gap-4">
+<div class="size-12 rounded-full bg-white flex items-center justify-center text-accent-pink">
+<span class="material-symbols-outlined">volunteer_activism</span>
+</div>
+<div>
+<p class="text-sm font-medium text-slate-600">Resolved Today</p>
+<p class="text-2xl font-bold text-slate-900">18 Cases</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 z-20 flex bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 pb-6 pt-2 shadow-2xl">
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">assignment</span>
+<p class="text-[10px] font-bold leading-normal tracking-wide">Requests</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 hover:text-accent-pink transition-colors" href="#">
+<span class="material-symbols-outlined">health_and_safety</span>
+<p class="text-[10px] font-medium leading-normal tracking-wide">Welfare</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 hover:text-accent-blue transition-colors" href="#">
+<span class="material-symbols-outlined">groups</span>
+<p class="text-[10px] font-medium leading-normal tracking-wide">Counselors</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<p class="text-[10px] font-medium leading-normal tracking-wide">Profile</p>
+</a>
+</nav>
+</div>
+</body></html>
