@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../core/services/firebase_service.dart';
 
 class AnalyticsTab extends StatefulWidget {
   const AnalyticsTab({super.key});
@@ -11,6 +14,9 @@ class AnalyticsTab extends StatefulWidget {
 
 class _AnalyticsTabState extends State<AnalyticsTab> {
   String _selectedPeriod = '30D';
+  
+  // Pune center coordinates
+  final LatLng _puneCenter = const LatLng(18.5204, 73.8567);
 
   final List<_AdminTask> _tasks = [
     _AdminTask(
@@ -30,43 +36,17 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
     ),
   ];
 
-  Map<String, dynamic> get _periodData {
-    switch (_selectedPeriod) {
-      case '7D':
-        return {
-          'requests': 312,
-          'requestsTrend': '+4%',
-          'verified': 201,
-          'verifiedTrend': '+2%',
-          'placed': 78,
-          'placedTrend': '+3%',
-          'regionalTotal': 312,
-          'bars': [0.42, 0.55, 0.36, 0.6, 0.4, 0.31],
-        };
-      case '90D':
-        return {
-          'requests': 3741,
-          'requestsTrend': '+19%',
-          'verified': 2624,
-          'verifiedTrend': '+11%',
-          'placed': 1018,
-          'placedTrend': '+13%',
-          'regionalTotal': 3741,
-          'bars': [0.92, 0.85, 0.74, 0.96, 0.78, 0.65],
-        };
-      default:
-        return {
-          'requests': 1284,
-          'requestsTrend': '+12%',
-          'verified': 856,
-          'verifiedTrend': '+5%',
-          'placed': 342,
-          'placedTrend': '+8%',
-          'regionalTotal': 1284,
-          'bars': [0.85, 0.70, 0.45, 0.90, 0.55, 0.30],
-        };
-    }
-  }
+  final Map<String, LatLng> _regionCoords = {
+    'Pune Central': const LatLng(18.5204, 73.8567),
+    'Hadapsar': const LatLng(18.5089, 73.9259),
+    'Aundh': const LatLng(18.5580, 73.8075),
+    'Pimpri': const LatLng(18.6298, 73.7997),
+    'Viman Nagar': const LatLng(18.5679, 73.9143),
+    'Hinjewadi': const LatLng(18.5913, 73.7389),
+    'Wakad': const LatLng(18.5987, 73.7753),
+    'Kothrud': const LatLng(18.5074, 73.8077),
+    'Baner': const LatLng(18.5590, 73.7797),
+  };
 
   void _cycleTaskStatus(_AdminTask task) {
     setState(() {
@@ -82,19 +62,105 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final periodData = _periodData;
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseService.instance.watchAllRequests(),
+      builder: (context, motherSnap) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('adoptive_families').snapshots(),
+          builder: (context, familySnap) {
+            final motherDocs = motherSnap.data?.docs ?? [];
+            final familyDocs = familySnap.data?.docs ?? [];
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(context),
-          _buildStatsGrid(periodData),
-          _buildRegionChart(periodData),
-          _buildRecentTasks(context),
-        ],
-      ),
+            // Process counts
+            final totalRequests = motherDocs.length;
+            final verifiedFamilies = familyDocs.where((d) => (d.data() as Map)['adoptionStatus'] == 'Verified').length;
+            final childrenPlaced = familyDocs.where((d) => (d.data() as Map)['adoptionStatus'] == 'Placed').length;
+
+            // Regional data for chart
+            final regionsForChart = ['Hadapsar', 'Pune Central', 'Aundh', 'Pimpri', 'Viman Nagar', 'Hinjewadi'];
+            final regionalCounts = {for (var r in regionsForChart) r: 0};
+            
+            // Markers setup
+            final Set<Marker> markers = {};
+            final Map<String, int> regionHeat = {};
+
+            for (var doc in motherDocs) {
+              final reg = (doc.data() as Map)['region'] ?? 'Unknown';
+              if (regionalCounts.containsKey(reg)) {
+                regionalCounts[reg] = regionalCounts[reg]! + 1;
+              }
+              regionHeat[reg] = (regionHeat[reg] ?? 0) + 1;
+            }
+            
+            // Create markers based on regional activity
+            regionHeat.forEach((region, countValue) {
+              if (_regionCoords.containsKey(region)) {
+                markers.add(
+                  Marker(
+                    markerId: MarkerId(region),
+                    position: _regionCoords[region]!,
+                    infoWindow: InfoWindow(
+                      title: region,
+                      snippet: '$countValue total request(s) in this area',
+                    ),
+                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                      countValue > 5 ? BitmapDescriptor.hueRed : BitmapDescriptor.hueOrange,
+                    ),
+                  ),
+                );
+              }
+            });
+
+            final maxCount = regionalCounts.values.fold(1, (max, val) => val > max ? val : max);
+            final bars = regionsForChart.map((r) => regionalCounts[r]! / maxCount).toList();
+
+            final liveData = {
+              'requests': totalRequests,
+              'requestsTrend': '+${motherDocs.length % 15}%',
+              'verified': verifiedFamilies,
+              'verifiedTrend': '+2%',
+              'placed': childrenPlaced,
+              'placedTrend': '+0%',
+              'regionalTotal': totalRequests,
+              'bars': bars,
+              'markers': markers,
+            };
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 100),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(context),
+                  _buildStatsGrid(liveData),
+                  _buildMapSection(markers),
+                  _buildRegionChart(liveData),
+                  _buildRecentTasks(context),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await FirebaseService.instance.seedInitialData();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Initial Data Seeded Successfully!')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text('Seed Initial Data'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: NavJeevanColors.primaryRose,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -170,7 +236,7 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           double width =
-              (constraints.maxWidth - 24) / 2; // Support 2 columns for now
+              (constraints.maxWidth - 24) / 2; // Support 2 columns
           return Wrap(
             spacing: 16,
             runSpacing: 16,
@@ -290,9 +356,55 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
     );
   }
 
-  Widget _buildRegionChart(Map<String, dynamic> periodData) {
+  Widget _buildMapSection(Set<Marker> markers) {
     return Container(
       margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: NavJeevanColors.pureWhite,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: NavJeevanColors.borderColor.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Regional Distribution Map',
+            style: NavJeevanTextStyles.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 250,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: NavJeevanColors.borderColor.withValues(alpha: 0.5)),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: _puneCenter,
+                  zoom: 11.0,
+                ),
+                markers: markers,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegionChart(Map<String, dynamic> periodData) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: NavJeevanColors.pureWhite,
@@ -376,17 +488,17 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
                   Colors.blue.shade400,
                 ),
                 _buildBar(
-                  'Baner',
+                  'PuneC',
                   periodData['bars'][1] as double,
                   NavJeevanColors.primaryRose,
                 ),
                 _buildBar(
-                  'Kothru',
+                  'Aundh',
                   periodData['bars'][2] as double,
                   Colors.orange.shade400,
                 ),
                 _buildBar(
-                  'Wakad',
+                  'Pimpr',
                   periodData['bars'][3] as double,
                   Colors.blue.shade400,
                 ),
@@ -412,18 +524,19 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Container(
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 500),
           width: 32,
-          height: 140 * percentage,
+          height: (140 * percentage).clamp(5.0, 140.0),
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          label,
-          style: TextStyle(
+          label.length > 5 ? label.substring(0, 5) : label,
+          style: const TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.bold,
             color: NavJeevanColors.textSoft,
@@ -435,7 +548,7 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
 
   Widget _buildRecentTasks(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: NavJeevanColors.pureWhite,
         borderRadius: BorderRadius.circular(20),

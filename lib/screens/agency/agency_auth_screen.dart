@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/theme/parent_colors.dart';
+import '../../providers/auth_provider.dart';
 
 class AgencyAuthScreen extends StatefulWidget {
   const AgencyAuthScreen({super.key});
@@ -19,6 +21,13 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
   final TextEditingController _loginPinController = TextEditingController(
     text: '1234',
   );
+  final TextEditingController _registerOrgController = TextEditingController();
+  final TextEditingController _registerNumberController =
+      TextEditingController();
+  final TextEditingController _registerEmailController =
+      TextEditingController();
+  final TextEditingController _registerPasswordController =
+      TextEditingController();
 
   @override
   void initState() {
@@ -36,11 +45,108 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
     _tabController.dispose();
     _loginIdController.dispose();
     _loginPinController.dispose();
+    _registerOrgController.dispose();
+    _registerNumberController.dispose();
+    _registerEmailController.dispose();
+    _registerPasswordController.dispose();
     super.dispose();
   }
 
-  void _enterAgencySystem() {
-    context.go(NavJeevanRoutes.agencyRequestsDashboard);
+  Future<void> _enterAgencySystem() async {
+    final identifier = _loginIdController.text.trim();
+    final password = _loginPinController.text.trim();
+    if (identifier.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter agency ID/email and PIN.')),
+      );
+      return;
+    }
+
+    try {
+      await context.read<AuthProvider>().loginWithRoleIdentifier(
+        identifier: identifier,
+        password: password,
+        expectedRole: 'agency',
+      );
+      if (!mounted) {
+        return;
+      }
+      context.go(NavJeevanRoutes.agencyRequestsDashboard);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Agency login failed: $error')));
+    }
+  }
+
+  Future<void> _continueAgencyWithGoogle() async {
+    try {
+      await context.read<AuthProvider>().signInWithGoogle(
+        expectedRole: 'agency',
+      );
+      if (!mounted) {
+        return;
+      }
+      context.go(NavJeevanRoutes.agencyRequestsDashboard);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Agency Google login failed: $error')),
+      );
+    }
+  }
+
+  Future<void> _registerAgency() async {
+    final org = _registerOrgController.text.trim();
+    final registrationNo = _registerNumberController.text.trim();
+    final email = _registerEmailController.text.trim();
+    final password = _registerPasswordController.text.trim();
+
+    if (org.isEmpty ||
+        registrationNo.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fill all registration fields.')),
+      );
+      return;
+    }
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password must be at least 6 characters.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await context.read<AuthProvider>().registerWithEmail(
+        email: email,
+        password: password,
+        role: 'agency',
+        profile: {
+          'organizationName': org,
+          'registrationNumber': registrationNo,
+        },
+      );
+      if (!mounted) {
+        return;
+      }
+      context.go(NavJeevanRoutes.agencyRequestsDashboard);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Registration failed: $error')));
+    }
   }
 
   @override
@@ -80,7 +186,9 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: ParentThemeColors.primaryBlue.withValues(alpha: 0.12),
+                      color: ParentThemeColors.primaryBlue.withValues(
+                        alpha: 0.12,
+                      ),
                       blurRadius: 14,
                       offset: const Offset(0, 4),
                     ),
@@ -134,7 +242,9 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
-                        color: ParentThemeColors.primaryBlue.withValues(alpha: 0.14),
+                        color: ParentThemeColors.primaryBlue.withValues(
+                          alpha: 0.14,
+                        ),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -172,6 +282,7 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
   }
 
   Widget _buildLoginCard() {
+    final isLoading = context.watch<AuthProvider>().isLoading;
     return SingleChildScrollView(
       child: Container(
         padding: const EdgeInsets.all(18),
@@ -230,13 +341,47 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _enterAgencySystem,
+                onPressed: isLoading ? null : _enterAgencySystem,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ParentThemeColors.primaryBlue,
                   foregroundColor: ParentThemeColors.pureWhite,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: const Text('Login to Agency Dashboard'),
+                child: isLoading
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            ParentThemeColors.pureWhite,
+                          ),
+                        ),
+                      )
+                    : const Text('Login to Agency Dashboard'),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: isLoading ? null : _continueAgencyWithGoogle,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: BorderSide(
+                    color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
+                  ),
+                ),
+                icon: isLoading
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.g_mobiledata_rounded, size: 24),
+                label: Text(
+                  isLoading ? 'Please wait...' : 'Continue with Google',
+                ),
               ),
             ),
           ],
@@ -246,6 +391,7 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
   }
 
   Widget _buildRegisterCard() {
+    final isLoading = context.watch<AuthProvider>().isLoading;
     return SingleChildScrollView(
       child: Container(
         padding: const EdgeInsets.all(18),
@@ -284,37 +430,60 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
               ),
             ),
             const SizedBox(height: 12),
-            const TextField(
-              decoration: InputDecoration(
+            TextField(
+              controller: _registerOrgController,
+              decoration: const InputDecoration(
                 labelText: 'Organization Name',
                 prefixIcon: Icon(Icons.corporate_fare_outlined),
               ),
             ),
             const SizedBox(height: 12),
-            const TextField(
-              decoration: InputDecoration(
+            TextField(
+              controller: _registerNumberController,
+              decoration: const InputDecoration(
                 labelText: 'Registration Number',
                 prefixIcon: Icon(Icons.verified_user_outlined),
               ),
             ),
             const SizedBox(height: 12),
-            const TextField(
-              decoration: InputDecoration(
-                labelText: 'Official Contact',
-                prefixIcon: Icon(Icons.call_outlined),
+            TextField(
+              controller: _registerEmailController,
+              decoration: const InputDecoration(
+                labelText: 'Official Email',
+                prefixIcon: Icon(Icons.email_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _registerPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Set Password',
+                prefixIcon: Icon(Icons.lock_outline),
               ),
             ),
             const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _enterAgencySystem,
+                onPressed: isLoading ? null : _registerAgency,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ParentThemeColors.primaryBlue,
                   foregroundColor: ParentThemeColors.pureWhite,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: const Text('Register & Continue'),
+                child: isLoading
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            ParentThemeColors.pureWhite,
+                          ),
+                        ),
+                      )
+                    : const Text('Register & Continue'),
               ),
             ),
           ],

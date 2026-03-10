@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../core/services/firebase_service.dart';
+import 'package:intl/intl.dart';
 
 class VerificationTab extends StatefulWidget {
   const VerificationTab({super.key});
@@ -16,67 +19,91 @@ class _VerificationTabState extends State<VerificationTab> {
   bool _newestFirst = true;
   bool _homeStudyOnly = false;
 
-  final List<_VerificationCase> _cases = [
-    _VerificationCase(
-      family: 'The Miller Family',
-      time: '2 hours ago',
-      priority: 'High Priority',
-      location: 'Austin, Texas',
-      documents: '8/10 Uploaded',
-      status: 'Pending',
-      imageUrl:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuD-ixILtUHMinsUQHZNYtE6CpSjeQ6iJLcsrVo_kTLx19rO0SjYX4F1HjGaZIPrSq8v_43B1TaBnrpcH_UsqP0AZ3HdpE_7POzX8DQ1F3Lilh5cGj1kKzdV14C-2zmifXA2jGkPhfgn6XFtdt_-t9vn096a537dF_JFCQv9fUdt6xanzJGg9wZNcsRvsRRKO4uGLY-fecNSyYIxiDr2K4qgkcfT5T5VM0hJAJNUZ44P_opX0blFKCzkYURu-X5HVfuv6t8Y9O04552M',
-      isUrgent: true,
-      submittedOrder: 1,
-    ),
-    _VerificationCase(
-      family: 'Chen-Williams Family',
-      time: 'Yesterday',
-      priority: 'Standard',
-      location: 'Seattle, WA',
-      documents: 'All Verified',
-      status: 'In Review',
-      imageUrl:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDUrylJOC9LSsaShEC_IwkrUap6KQseA-mGV6WNHwyLMTANbtkjJVlLNaIj37It3dKEoU0uPlhuC4BQ_elo0YuwcNZoSv8AcMuE42JbW0EQ8Lmz30Q5w47FbE9I4YcuEX9Pwg1pWuHmVOXlqvhK-6Z7GWlykZAmWKs2-7L-vah1687-ZmdW87OgApE5qyduwUeAo2gnMJMMPxf6fLtfZqsCu1oT5FbYae0cc89k7x9fWwPVEd0UGM-I_SoyMOh7diBl7Dcn1i7MgcAh',
-      canFinalApprove: true,
-      homeStudyReady: true,
-      submittedOrder: 2,
-    ),
-    _VerificationCase(
-      family: 'The Garcia Family',
-      time: '3 days ago',
-      priority: 'Standard',
-      location: 'Miami, Florida',
-      documents: 'Update Requested',
-      status: 'Pending',
-      imageUrl:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBY0db_gr0JEO37efkPcN0pjU62Ipf37c07eNab6egfGj_DaUUR9i7z_abUBTcCy2GhspbFpZcRgd6uHGGoP8ZV6s3szm_qKmg3Y1ZPT3uUQdVmuj5KOSc5b1Fcpzc8_DPO27ZBoaNVejl15GWmZNfSOlb5UgX62AM2pSVcDryG10fuZNp1QHGtOii6z9CbmSMJQeMHCPXcOqHXVMZ2lrhphrgwuvw7DGHzE_E2uWFQ64vbfq4-5EL7ojlj8n6r9s4RGqVW9cvg0WpT',
-      submittedOrder: 3,
-    ),
-  ];
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseService.instance.getVerificationQueue(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-  List<String> get _tabs {
-    final pending = _cases.where((c) => c.status == 'Pending').length;
-    final inReview = _cases.where((c) => c.status == 'In Review').length;
-    final approved = _cases.where((c) => c.status == 'Approved').length;
-    final rejected = _cases.where((c) => c.status == 'Rejected').length;
-    return [
-      'Pending ($pending)',
-      'In Review ($inReview)',
-      'Approved ($approved)',
-      'Rejected ($rejected)',
-    ];
+        final docs = snapshot.data!.docs;
+        final cases = docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final createdAt = data['createdAt'] as Timestamp?;
+          final status = data['adoptionStatus'] ?? 'Pending';
+          
+          return _VerificationCase(
+            id: doc.id,
+            family: data['familyName'] ?? 'Unknown Family',
+            time: createdAt != null 
+                ? DateFormat('MMM d, HH:mm').format(createdAt.toDate())
+                : 'Recently',
+            priority: data['annualIncome'] != null && 
+                     double.tryParse(data['annualIncome'].toString()) != null &&
+                     double.parse(data['annualIncome'].toString()) > 1000000 
+                     ? 'High Priority' : 'Standard',
+            location: data['region'] ?? 'Unknown Location',
+            documents: status == 'Verified' ? 'All Verified' : 'Documents Uploaded',
+            status: status,
+            imageUrl: '', 
+            isUrgent: status == 'Pending',
+            submittedOrder: createdAt?.millisecondsSinceEpoch ?? 0,
+            canFinalApprove: status == 'In Review',
+          );
+        }).toList();
+
+        final filtered = _applyFilters(cases);
+
+        return Column(
+          children: [
+            _buildTabs(cases),
+            _buildFilterChips(),
+            _buildSearchAndActions(filtered),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (filtered.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: NavJeevanColors.pureWhite,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: NavJeevanColors.borderColor.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        'No families found for the selected tab/filters.',
+                        style: NavJeevanTextStyles.bodyMedium.copyWith(
+                          color: NavJeevanColors.textSoft,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  else
+                    ...filtered.map(_buildFamilyCard),
+                  const SizedBox(height: 100),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  List<_VerificationCase> get _filteredCases {
-    Iterable<_VerificationCase> records = _cases.where((record) {
+  List<_VerificationCase> _applyFilters(List<_VerificationCase> cases) {
+    Iterable<_VerificationCase> records = cases.where((record) {
       switch (_activeTab) {
         case 0:
           return record.status == 'Pending';
         case 1:
           return record.status == 'In Review';
         case 2:
-          return record.status == 'Approved';
+          return record.status == 'Verified' || record.status == 'Approved';
         case 3:
           return record.status == 'Rejected';
         default:
@@ -86,9 +113,6 @@ class _VerificationTabState extends State<VerificationTab> {
 
     if (_urgentOnly) {
       records = records.where((record) => record.isUrgent);
-    }
-    if (_homeStudyOnly) {
-      records = records.where((record) => record.homeStudyReady);
     }
     if (_searchQuery.trim().isNotEmpty) {
       final query = _searchQuery.trim().toLowerCase();
@@ -102,89 +126,50 @@ class _VerificationTabState extends State<VerificationTab> {
     final results = records.toList();
     results.sort(
       (a, b) => _newestFirst
-          ? a.submittedOrder.compareTo(b.submittedOrder)
-          : b.submittedOrder.compareTo(a.submittedOrder),
+          ? b.submittedOrder.compareTo(a.submittedOrder)
+          : a.submittedOrder.compareTo(b.submittedOrder),
     );
     return results;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildTabs(),
-        _buildFilterChips(),
-        _buildSearchAndActions(),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              if (_filteredCases.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: NavJeevanColors.pureWhite,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: NavJeevanColors.borderColor.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Text(
-                    'No families found for the selected tab/filters.',
-                    style: NavJeevanTextStyles.bodyMedium.copyWith(
-                      color: NavJeevanColors.textSoft,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                )
-              else
-                ..._filteredCases.map(_buildFamilyCard),
-              const SizedBox(height: 100),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _buildTabs(List<_VerificationCase> cases) {
+    final pending = cases.where((c) => c.status == 'Pending').length;
+    final inReview = cases.where((c) => c.status == 'In Review').length;
+    final approved = cases.where((c) => c.status == 'Verified' || c.status == 'Approved').length;
+    final rejected = cases.where((c) => c.status == 'Rejected').length;
+    
+    final tabs = [
+      'Pending ($pending)',
+      'In Review ($inReview)',
+      'Approved ($approved)',
+      'Rejected ($rejected)',
+    ];
 
-  Widget _buildTabs() {
     return Container(
-      decoration: BoxDecoration(
-        color: NavJeevanColors.pureWhite,
-        border: Border(
-          bottom: BorderSide(
-            color: NavJeevanColors.borderColor.withValues(alpha: 0.3),
-          ),
-        ),
-      ),
+      color: Colors.white,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
-          children: List.generate(_tabs.length, (index) {
-            bool isActive = _activeTab == index;
+          children: List.generate(tabs.length, (index) {
+            final active = _activeTab == index;
             return GestureDetector(
               onTap: () => setState(() => _activeTab = index),
               child: Container(
-                margin: const EdgeInsets.only(right: 24),
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: isActive
-                          ? NavJeevanColors.primaryRose
-                          : Colors.transparent,
+                      color: active ? NavJeevanColors.primaryRose : Colors.transparent,
                       width: 3,
                     ),
                   ),
                 ),
                 child: Text(
-                  _tabs[index],
-                  style: NavJeevanTextStyles.bodyMedium.copyWith(
-                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                    color: isActive
-                        ? NavJeevanColors.primaryRose
-                        : NavJeevanColors.textSoft,
+                  tabs[index],
+                  style: TextStyle(
+                    color: active ? NavJeevanColors.primaryRose : NavJeevanColors.textSoft,
+                    fontWeight: active ? FontWeight.bold : FontWeight.w500,
                   ),
                 ),
               ),
@@ -233,7 +218,7 @@ class _VerificationTabState extends State<VerificationTab> {
     );
   }
 
-  Widget _buildSearchAndActions() {
+  Widget _buildSearchAndActions(List<_VerificationCase> filtered) {
     return Container(
       color: NavJeevanColors.primaryRose.withValues(alpha: 0.02),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -258,26 +243,12 @@ class _VerificationTabState extends State<VerificationTab> {
             children: [
               Expanded(
                 child: Text(
-                  '${_filteredCases.length} case(s) visible',
+                  '${filtered.length} case(s) visible',
                   style: NavJeevanTextStyles.bodySmall.copyWith(
                     color: NavJeevanColors.textSoft,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-              TextButton(
-                onPressed: _filteredCases.isEmpty
-                    ? null
-                    : () {
-                        setState(() {
-                          for (final record in _filteredCases) {
-                            record.status = 'Approved';
-                            record.canFinalApprove = false;
-                            record.documents = 'All Verified';
-                          }
-                        });
-                      },
-                child: const Text('Approve Visible'),
               ),
               TextButton(
                 onPressed: () {
@@ -373,19 +344,13 @@ class _VerificationTabState extends State<VerificationTab> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(30),
-                child: Image.network(
-                  record.imageUrl,
+                child: Container(
                   width: 56,
                   height: 56,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 56,
-                    height: 56,
-                    color: NavJeevanColors.primaryRose.withValues(alpha: 0.1),
-                    child: Icon(
-                      Icons.family_restroom_rounded,
-                      color: NavJeevanColors.primaryRose,
-                    ),
+                  color: NavJeevanColors.primaryRose.withValues(alpha: 0.1),
+                  child: Icon(
+                    Icons.family_restroom_rounded,
+                    color: NavJeevanColors.primaryRose,
                   ),
                 ),
               ),
@@ -456,11 +421,8 @@ class _VerificationTabState extends State<VerificationTab> {
               if (record.canFinalApprove) ...[
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        record.status = 'Approved';
-                        record.canFinalApprove = false;
-                      });
+                    onPressed: () async {
+                      await FirebaseService.instance.updateVerificationStatus(record.id, 'Verified');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: NavJeevanColors.primaryRose,
@@ -482,11 +444,8 @@ class _VerificationTabState extends State<VerificationTab> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        record.status = 'Rejected';
-                        record.canFinalApprove = false;
-                      });
+                    onPressed: () async {
+                      await FirebaseService.instance.updateVerificationStatus(record.id, 'Rejected');
                     },
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: NavJeevanColors.borderColor),
@@ -505,15 +464,11 @@ class _VerificationTabState extends State<VerificationTab> {
                     ),
                   ),
                 ),
-              ] else ...[
+              ] else if (record.status == 'Pending') ...[
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        record.status = 'In Review';
-                        record.documents = 'All Verified';
-                        record.canFinalApprove = true;
-                      });
+                    onPressed: () async {
+                      await FirebaseService.instance.updateVerificationStatus(record.id, 'In Review');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade50,
@@ -525,7 +480,7 @@ class _VerificationTabState extends State<VerificationTab> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     child: const Text(
-                      'REVIEW DOCUMENTS',
+                      'MARK AS IN-REVIEW',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
@@ -541,17 +496,11 @@ class _VerificationTabState extends State<VerificationTab> {
                   ),
                   child: IconButton(
                     icon: Icon(
-                      Icons.more_horiz_rounded,
+                      Icons.visibility_rounded,
                       color: NavJeevanColors.primaryRose,
                     ),
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'More actions for ${record.family} will be added soon.',
-                          ),
-                        ),
-                      );
+                      // Logic to view detail
                     },
                   ),
                 ),
@@ -565,6 +514,7 @@ class _VerificationTabState extends State<VerificationTab> {
 
   Color _statusBg(String status) {
     switch (status) {
+      case 'Verified':
       case 'Approved':
         return Colors.green.shade50;
       case 'Rejected':
@@ -578,6 +528,7 @@ class _VerificationTabState extends State<VerificationTab> {
 
   Color _statusColor(String status) {
     switch (status) {
+      case 'Verified':
       case 'Approved':
         return Colors.green.shade800;
       case 'Rejected':
@@ -626,7 +577,20 @@ class _VerificationTabState extends State<VerificationTab> {
 }
 
 class _VerificationCase {
+  final String id;
+  final String family;
+  final String time;
+  final String priority;
+  final String location;
+  String documents;
+  String status;
+  final String imageUrl;
+  final bool isUrgent;
+  bool canFinalApprove;
+  final int submittedOrder;
+
   _VerificationCase({
+    required this.id,
     required this.family,
     required this.time,
     required this.priority,
@@ -637,18 +601,5 @@ class _VerificationCase {
     required this.submittedOrder,
     this.isUrgent = false,
     this.canFinalApprove = false,
-    this.homeStudyReady = false,
   });
-
-  final String family;
-  final String time;
-  final String priority;
-  final String location;
-  String documents;
-  String status;
-  final String imageUrl;
-  final bool isUrgent;
-  bool canFinalApprove;
-  final bool homeStudyReady;
-  final int submittedOrder;
 }

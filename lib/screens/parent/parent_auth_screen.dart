@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/theme/parent_colors.dart';
+import '../../providers/auth_provider.dart';
 
 class ParentAuthScreen extends StatefulWidget {
   const ParentAuthScreen({super.key});
@@ -20,6 +22,12 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
   final TextEditingController _loginPinController = TextEditingController(
     text: '1234',
   );
+  final TextEditingController _registerPhoneController = TextEditingController(
+    text: '9876509999',
+  );
+  final TextEditingController _registerPinController = TextEditingController(
+    text: '1234',
+  );
 
   @override
   void initState() {
@@ -32,21 +40,89 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
     _tabController.dispose();
     _loginPhoneController.dispose();
     _loginPinController.dispose();
+    _registerPhoneController.dispose();
+    _registerPinController.dispose();
     super.dispose();
   }
 
-  void _continueToParentFlow() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Welcome to the Adoption Journey!'),
-        backgroundColor: ParentThemeColors.successGreen,
-      ),
-    );
-    context.push(NavJeevanRoutes.parentVerificationStatus);
+  Future<void> _continueToParentFlow() async {
+    final phone = _loginPhoneController.text.trim();
+    final pin = _loginPinController.text.trim();
+    if (phone.isEmpty || pin.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter phone and PIN.')));
+      return;
+    }
+
+    try {
+      await context.read<AuthProvider>().loginWithPhonePin(
+        phone: phone,
+        pin: pin,
+        expectedRole: 'parent',
+      );
+      if (!mounted) {
+        return;
+      }
+      context.push(NavJeevanRoutes.parentVerificationStatus);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Parent login failed: $error')));
+    }
   }
 
-  void _startRegistration() {
-    context.push(NavJeevanRoutes.parentRegistrationWizard);
+  Future<void> _startRegistration() async {
+    final phone = _registerPhoneController.text.trim();
+    final pin = _registerPinController.text.trim();
+    if (phone.isEmpty || pin.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter phone and PIN to register.')),
+      );
+      return;
+    }
+
+    try {
+      await context.read<AuthProvider>().registerWithPhonePin(
+        phone: phone,
+        pin: pin,
+        role: 'parent',
+      );
+      if (!mounted) {
+        return;
+      }
+      context.push(NavJeevanRoutes.parentRegistrationWizard);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Parent registration failed: $error')),
+      );
+    }
+  }
+
+  Future<void> _continueParentWithGoogle() async {
+    try {
+      await context.read<AuthProvider>().signInWithGoogle(
+        expectedRole: 'parent',
+        profile: {'entry': 'google'},
+      );
+      if (!mounted) {
+        return;
+      }
+      context.push(NavJeevanRoutes.parentVerificationStatus);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Parent Google login failed: $error')),
+      );
+    }
   }
 
   @override
@@ -91,7 +167,9 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
+                          color: ParentThemeColors.primaryBlue.withValues(
+                            alpha: 0.3,
+                          ),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -223,6 +301,7 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
   }
 
   Widget _buildLoginCard() {
+    final isLoading = context.watch<AuthProvider>().isLoading;
     return _buildAuthCard(
       children: [
         const Text(
@@ -328,7 +407,7 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: _continueToParentFlow,
+            onPressed: isLoading ? null : _continueToParentFlow,
             style: ElevatedButton.styleFrom(
               backgroundColor: ParentThemeColors.primaryBlue,
               foregroundColor: ParentThemeColors.pureWhite,
@@ -337,10 +416,39 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
               ),
               elevation: 4,
             ),
-            child: const Text(
-              'Login & Continue',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            child: isLoading
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        ParentThemeColors.pureWhite,
+                      ),
+                    ),
+                  )
+                : const Text(
+                    'Login & Continue',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: isLoading ? null : _continueParentWithGoogle,
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
             ),
+            icon: isLoading
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.g_mobiledata_rounded, size: 24),
+            label: Text(isLoading ? 'Please wait...' : 'Continue with Google'),
           ),
         ),
       ],
@@ -348,6 +456,7 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
   }
 
   Widget _buildRegisterCard() {
+    final isLoading = context.watch<AuthProvider>().isLoading;
     return _buildAuthCard(
       children: [
         const Text(
@@ -382,11 +491,64 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
           description: 'Continuous support for your family journey',
         ),
         const SizedBox(height: 24),
+        TextField(
+          controller: _registerPhoneController,
+          keyboardType: TextInputType.phone,
+          decoration: InputDecoration(
+            labelText: 'Phone Number',
+            hintText: 'Enter 10-digit number',
+            prefixIcon: Icon(
+              Icons.phone_outlined,
+              color: ParentThemeColors.primaryBlue,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: ParentThemeColors.borderColor,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: ParentThemeColors.primaryBlue,
+                width: 2,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _registerPinController,
+          keyboardType: TextInputType.number,
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: 'Set 4-digit PIN',
+            hintText: 'Create secure PIN',
+            prefixIcon: Icon(
+              Icons.lock_outline,
+              color: ParentThemeColors.primaryBlue,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: ParentThemeColors.borderColor,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: ParentThemeColors.primaryBlue,
+                width: 2,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
         SizedBox(
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: _startRegistration,
+            onPressed: isLoading ? null : _startRegistration,
             style: ElevatedButton.styleFrom(
               backgroundColor: ParentThemeColors.primaryBlue,
               foregroundColor: ParentThemeColors.pureWhite,
@@ -395,10 +557,21 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
               ),
               elevation: 4,
             ),
-            child: const Text(
-              'Start Registration',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
+            child: isLoading
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        ParentThemeColors.pureWhite,
+                      ),
+                    ),
+                  )
+                : const Text(
+                    'Start Registration',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
           ),
         ),
       ],

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/constants/route_names.dart';
+import '../../core/services/firebase_service.dart';
+import '../../core/constants/dummy_agency_data.dart';
+import '../../providers/auth_provider.dart';
 
 class CounselingScreen extends StatefulWidget {
   const CounselingScreen({super.key});
@@ -144,6 +149,14 @@ class _CounselingScreenState extends State<CounselingScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            // Assigned Counselor Section with Firebase Integration
+            _buildAssignedCounselorSection(context),
+            const SizedBox(height: 20),
+            Text(
+              'Find More Support',
+              style: NavJeevanTextStyles.headlineMedium.copyWith(fontSize: 22),
+            ),
+            const SizedBox(height: 12),
             TextField(
               controller: _searchController,
               onChanged: (_) => setState(() {}),
@@ -274,6 +287,180 @@ class _CounselingScreenState extends State<CounselingScreen> {
     );
   }
 
+  Widget _buildAssignedCounselorSection(BuildContext context) {
+    final userId = context.read<AuthProvider>().user?.uid;
+    if (userId == null) {
+      return const SizedBox.shrink();
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseService.instance.watchUserAssignments(userId),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: NavJeevanColors.borderColor),
+            ),
+            child: Text(
+              'Unable to load assigned counselor right now.',
+              style: NavJeevanTextStyles.bodySmall,
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: NavJeevanColors.blush.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: NavJeevanColors.borderColor),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.person_add_alt_1,
+                  color: NavJeevanColors.primaryRose,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'No counselor assigned yet. Our agency will assign one soon.',
+                    style: NavJeevanTextStyles.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final assignmentDoc = snapshot.data!.docs.first;
+        final assignment = assignmentDoc.data() as Map<String, dynamic>;
+        final counselorEmail = assignment['counselorEmail'] as String?;
+        final counselorName =
+            assignment['counselorName'] as String? ?? 'Assigned Counselor';
+
+        final counselor = DummyAgencyData.agencyCounsellors.firstWhere(
+          (item) => item.email == counselorEmail,
+          orElse: () => DummyAgencyData.agencyCounsellors.first,
+        );
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: NavJeevanColors.primaryRose.withValues(alpha: 0.25),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.verified_user_outlined,
+                    size: 18,
+                    color: NavJeevanColors.primaryRose,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Assigned Counselor',
+                    style: NavJeevanTextStyles.bodySmall.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: NavJeevanColors.primaryRose,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundImage: NetworkImage(counselor.image),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          counselorName,
+                          style: NavJeevanTextStyles.titleLarge.copyWith(
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          counselor.specialty,
+                          style: NavJeevanTextStyles.bodySmall,
+                        ),
+                        if (counselor.rating != null)
+                          Text(
+                            '⭐ ${counselor.rating} • ${counselor.yearsExperience ?? 0} years',
+                            style: NavJeevanTextStyles.bodySmall,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  if (counselor.phone != null)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _callCounselor(counselor.phone!),
+                        icon: const Icon(Icons.call, size: 16),
+                        label: const Text('Call'),
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        context.push(
+                          NavJeevanRoutes.motherCounselingBooking,
+                          extra: {
+                            'id': 'assigned_${counselor.email ?? 'na'}',
+                            'name': counselorName,
+                            'specialty': counselor.specialty,
+                            'status': 'Assigned',
+                            'statusColor': NavJeevanColors.primaryRose,
+                            'mode': 'Video',
+                            'languages': (counselor.languages ?? []).join(', '),
+                            'experience':
+                                '${counselor.yearsExperience ?? 0} years',
+                            'rating': counselor.rating ?? 4.5,
+                            'fee': '₹600/session',
+                            'contact': counselor.phone ?? '',
+                            'nextSlot': 'Today, 5:30 PM',
+                            'about': counselor.bio ?? 'Professional counselor',
+                          },
+                        );
+                      },
+                      icon: const Icon(Icons.calendar_month, size: 16),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: NavJeevanColors.primaryRose,
+                        foregroundColor: Colors.white,
+                      ),
+                      label: const Text('Book Session'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildCounselorCard(
     Map<String, dynamic> counselor,
     BuildContext context,
@@ -285,9 +472,14 @@ class _CounselingScreenState extends State<CounselingScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: NavJeevanColors.borderColor.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: NavJeevanColors.borderColor.withValues(alpha: 0.5),
+        ),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+          ),
         ],
       ),
       child: Row(
@@ -538,7 +730,10 @@ class _CounselingScreenState extends State<CounselingScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border(left: BorderSide(color: color, width: 4)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+          ),
         ],
       ),
       child: Column(
@@ -646,7 +841,9 @@ class _CounselingScreenState extends State<CounselingScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(color: NavJeevanColors.borderColor.withValues(alpha: 0.5)),
+          top: BorderSide(
+            color: NavJeevanColors.borderColor.withValues(alpha: 0.5),
+          ),
         ),
       ),
       child: BottomNavigationBar(

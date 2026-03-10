@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'core/theme/theme.dart';
 import 'core/constants/route_names.dart';
+import 'providers/auth_provider.dart';
 import 'screens/splash/splash_screen.dart';
 import 'screens/role_select/role_select_screen.dart';
 import 'screens/mother/mother_auth_screen.dart';
@@ -32,6 +34,79 @@ class NavJeevanApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final GoRouter router = GoRouter(
       initialLocation: NavJeevanRoutes.splash,
+      redirect: (context, state) {
+        final auth = context.read<AuthProvider>();
+
+        // Allow access to splash, role select, and auth screens without authentication
+        final publicRoutes = [
+          NavJeevanRoutes.splash,
+          NavJeevanRoutes.roleSelect,
+          NavJeevanRoutes.motherAuth,
+          NavJeevanRoutes.parentAuth,
+          NavJeevanRoutes.agencyAuth,
+          NavJeevanRoutes.adminAuth,
+        ];
+
+        // If already on a public route, allow access
+        if (publicRoutes.contains(state.matchedLocation)) {
+          return null;
+        }
+
+        // Protected routes require authentication and role verification
+        final protectedMotherRoutes = [
+          NavJeevanRoutes.motherHelpRequest,
+          NavJeevanRoutes.motherNgoMap,
+          NavJeevanRoutes.motherCounseling,
+          NavJeevanRoutes.motherCounselingBooking,
+          NavJeevanRoutes.motherProfile,
+        ];
+
+        final protectedParentRoutes = [
+          NavJeevanRoutes.parentRegistrationWizard,
+          NavJeevanRoutes.parentVerificationStatus,
+          NavJeevanRoutes.parentGuidance,
+          NavJeevanRoutes.parentSupport,
+          NavJeevanRoutes.parentProfile,
+        ];
+
+        final protectedAgencyRoutes = [
+          NavJeevanRoutes.agencyRequestsDashboard,
+          NavJeevanRoutes.agencyWelfareMonitoring,
+          NavJeevanRoutes.agencyCounselorManagement,
+          NavJeevanRoutes.agencyProfile,
+        ];
+
+        final protectedAdminRoutes = [NavJeevanRoutes.adminDashboard];
+
+        // If user is not logged in, redirect to role select
+        if (!auth.isAuthenticated) {
+          return NavJeevanRoutes.roleSelect;
+        }
+
+        // Enforce role-based access
+        if (protectedMotherRoutes.contains(state.matchedLocation) &&
+            auth.userRole != 'mother') {
+          return NavJeevanRoutes.roleSelect;
+        }
+
+        if (protectedParentRoutes.contains(state.matchedLocation) &&
+            auth.userRole != 'parent') {
+          return NavJeevanRoutes.roleSelect;
+        }
+
+        if (protectedAgencyRoutes.contains(state.matchedLocation) &&
+            auth.userRole != 'agency') {
+          return NavJeevanRoutes.roleSelect;
+        }
+
+        if (protectedAdminRoutes.contains(state.matchedLocation) &&
+            auth.userRole != 'admin') {
+          return NavJeevanRoutes.roleSelect;
+        }
+
+        // Allow access to legal guidance and other shared routes
+        return null;
+      },
       routes: [
         GoRoute(
           path: NavJeevanRoutes.splash,
@@ -105,8 +180,7 @@ class NavJeevanApp extends StatelessWidget {
         ),
         GoRoute(
           path: NavJeevanRoutes.agencyCounselorManagement,
-          builder: (context, state) =>
-              const AgencyCounselorManagementScreen(),
+          builder: (context, state) => const AgencyCounselorManagementScreen(),
         ),
         GoRoute(
           path: NavJeevanRoutes.agencyProfile,

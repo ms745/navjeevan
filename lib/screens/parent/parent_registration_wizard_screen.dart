@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/dummy_parent_data.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/theme/parent_colors.dart';
+import '../../core/services/firebase_service.dart';
+import '../../core/utils/validators.dart';
 
 class ParentRegistrationWizardScreen extends StatefulWidget {
   const ParentRegistrationWizardScreen({super.key});
@@ -14,8 +16,19 @@ class ParentRegistrationWizardScreen extends StatefulWidget {
 
 class _ParentRegistrationWizardScreenState
     extends State<ParentRegistrationWizardScreen> {
-  int _currentStep = 3; // Step 4 of 5 (0-indexed as 3)
+  int _currentStep = 0; // Starting from step 1
   final int _totalSteps = 5;
+  bool _isSubmitting = false;
+
+  // Controllers for data collection
+  final _fullNameController = TextEditingController(text: 'Sarah Mitchell');
+  final _emailController = TextEditingController(
+    text: 'sarah.mitchell@example.com',
+  );
+  final _phoneController = TextEditingController(text: '9876509999');
+  final _incomeController = TextEditingController(
+    text: '850000',
+  ); // Sample income
 
   // Document upload status
   final Map<String, bool> _documentsUploaded = {
@@ -36,12 +49,42 @@ class _ParentRegistrationWizardScreenState
     }
   }
 
-  void _nextStep() {
+  void _nextStep() async {
     if (_currentStep < _totalSteps - 1) {
       setState(() {
         _currentStep++;
       });
     } else {
+      _submitApplication();
+    }
+  }
+
+  Future<void> _submitApplication() async {
+    setState(() => _isSubmitting = true);
+
+    try {
+      // 1. Validate (Simplified for this wizard)
+      final incomeError = NavJeevanValidator.validateAnnualIncome(
+        _incomeController.text,
+      );
+      if (incomeError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(incomeError), backgroundColor: Colors.red),
+        );
+        setState(() => _isSubmitting = false);
+        return;
+      }
+
+      // 2. Submit to Firebase (In real app, we'd upload actual files from _documentPaths)
+      await FirebaseService.instance.submitAdoptionApplication(
+        familyName: _fullNameController.text,
+        region: 'Pune', // Derived or selected
+        annualIncome: double.tryParse(_incomeController.text) ?? 100000,
+        documentPaths: {}, // Empty for now as we use mock paths
+      );
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Registration Submitted Successfully!'),
@@ -49,6 +92,15 @@ class _ParentRegistrationWizardScreenState
         ),
       );
       context.push(NavJeevanRoutes.parentVerificationStatus);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -172,7 +224,9 @@ class _ParentRegistrationWizardScreenState
       decoration: BoxDecoration(
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ParentThemeColors.skyBlue.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: ParentThemeColors.skyBlue.withValues(alpha: 0.5),
+        ),
         boxShadow: [
           BoxShadow(
             color: ParentThemeColors.primaryBlue.withValues(alpha: 0.08),
@@ -295,28 +349,28 @@ class _ParentRegistrationWizardScreenState
           label: 'Full Name',
           hint: 'Enter full name as per ID',
           icon: Icons.person_outline,
-          initialValue: 'Sarah Mitchell',
+          controller: _fullNameController,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           label: 'Email Address',
           hint: 'your.email@example.com',
           icon: Icons.email_outlined,
-          initialValue: 'sarah.mitchell@example.com',
+          controller: _emailController,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           label: 'Phone Number',
           hint: '10-digit mobile number',
           icon: Icons.phone_outlined,
-          initialValue: '9876509999',
+          controller: _phoneController,
         ),
         const SizedBox(height: 16),
         _buildTextField(
-          label: 'Date of Birth',
-          hint: 'DD/MM/YYYY',
-          icon: Icons.calendar_today,
-          initialValue: '15/08/1985',
+          label: 'Annual Income',
+          hint: 'Min ₹1,00,000',
+          icon: Icons.account_balance_wallet_outlined,
+          controller: _incomeController,
         ),
       ],
     );
@@ -455,7 +509,9 @@ class _ParentRegistrationWizardScreenState
       decoration: BoxDecoration(
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ParentThemeColors.skyBlue.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: ParentThemeColors.skyBlue.withValues(alpha: 0.5),
+        ),
         boxShadow: [
           BoxShadow(
             color: ParentThemeColors.primaryBlue.withValues(alpha: 0.08),
@@ -475,14 +531,13 @@ class _ParentRegistrationWizardScreenState
     required String label,
     required String hint,
     required IconData icon,
+    TextEditingController? controller,
     String? initialValue,
     int maxLines = 1,
   }) {
-    // Use TextFormField with initialValue (not a controller) to avoid
-    // creating new TextEditingController instances on every rebuild,
-    // which causes '_dependents.isEmpty' assertion failures and overflow.
     return TextFormField(
-      initialValue: initialValue,
+      controller: controller,
+      initialValue: controller == null ? initialValue : null,
       maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
@@ -680,7 +735,7 @@ class _ParentRegistrationWizardScreenState
           Expanded(
             flex: 2,
             child: ElevatedButton(
-              onPressed: _nextStep,
+              onPressed: _isSubmitting ? null : _nextStep,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: ParentThemeColors.primaryBlue,
@@ -690,15 +745,24 @@ class _ParentRegistrationWizardScreenState
                 ),
                 elevation: 4,
               ),
-              child: Text(
-                _currentStep == _totalSteps - 1
-                    ? 'Submit Application'
-                    : 'Continue',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      _currentStep == _totalSteps - 1
+                          ? 'Submit Application'
+                          : 'Continue',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ],

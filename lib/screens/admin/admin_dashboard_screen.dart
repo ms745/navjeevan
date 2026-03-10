@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/text_styles.dart';
+import '../../core/widgets/logout_button.dart';
 import 'widgets/analytics_tab.dart';
 import 'widgets/verification_tab.dart';
 import 'widgets/ai_risk_tab.dart';
@@ -82,23 +83,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               );
             },
           ),
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: NavJeevanColors.primaryRose.withValues(
-                alpha: 0.1,
-              ),
-              child: Text(
-                'PA',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: NavJeevanColors.primaryRose,
-                ),
-              ),
-            ),
-          ),
+          const SizedBox(width: 8),
+          const LogoutButton(),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),

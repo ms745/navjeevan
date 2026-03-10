@@ -39,6 +39,8 @@ C:\Users\samruddhikhilari\Desktop\VIT\smile_please\antigravity_stich\NavJeevan\n
 # Symbolication related
 app.*.symbols
 
+sha1.txt
+
 # Obfuscation related
 app.*.map.json
 

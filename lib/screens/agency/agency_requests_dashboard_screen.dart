@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/dummy_agency_data.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/services/agency_notification_center.dart';
+import '../../core/services/firebase_service.dart';
 import '../../core/theme/parent_colors.dart';
+import '../../core/widgets/logout_button.dart';
 
 class AgencyRequestsDashboardScreen extends StatefulWidget {
   const AgencyRequestsDashboardScreen({super.key});
@@ -57,14 +60,6 @@ class _AgencyRequestsDashboardScreenState
         .toList();
 
     return [...motherRequests, ...adoptionRequests];
-  }
-
-  List<Map<String, String>> get _filteredRequests {
-    if (_selectedFilter == 'All') return _allRequests;
-    if (_selectedFilter == 'Urgent') {
-      return _allRequests.where((r) => r['risk'] == 'High').toList();
-    }
-    return _allRequests.where((r) => r['status'] == _selectedFilter).toList();
   }
 
   Color _riskColor(String risk) {
@@ -143,97 +138,108 @@ class _AgencyRequestsDashboardScreenState
               child: _buildFilterChips(),
             ),
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          flex: 2,
-                          child: Text(
-                            'ID',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: ParentThemeColors.textMid,
-                            ),
-                          ),
-                        ),
-                        const Expanded(
-                          flex: 3,
-                          child: Text(
-                            'Region',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: ParentThemeColors.textMid,
-                            ),
-                          ),
-                        ),
-                        const Expanded(
-                          flex: 3,
-                          child: Text(
-                            'Reason',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: ParentThemeColors.textMid,
-                            ),
-                          ),
-                        ),
-                        const Expanded(
-                          flex: 2,
-                          child: Text(
-                            'Risk',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: ParentThemeColors.textMid,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 1,
-                          child: Container(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    color: ParentThemeColors.pureWhite,
-                    child: Column(
-                      children: _filteredRequests
-                          .take(5)
-                          .map(_buildRequestCard)
-                          .toList(),
-                    ),
-                  ),
-                  Center(
-                    child: TextButton(
-                      onPressed: () {},
-                      child: const Text(
-                        'View All Requests',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: ParentThemeColors.textMid,
-                        ),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseService.instance.watchAllRequests(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+
+                  return ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: _buildRequestHeader(),
                       ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: _buildStatsTiles(),
-                  ),
-                ],
+                      if (docs.isEmpty)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Text('No active requests found.'),
+                          ),
+                        )
+                      else
+                        ...docs.take(10).map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          return _buildRequestCard({
+                            'id': doc.id.substring(0, 5).toUpperCase(),
+                            'region': data['region'] ?? 'Unknown',
+                            'reason':
+                                (data['reasons'] as List?)?.join(', ') ??
+                                'No reason',
+                            'risk': data['riskLevel'] ?? 'Low',
+                            'status': data['status'] ?? 'Pending',
+                          });
+                        }),
+
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: _buildStatsTiles(),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
       bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildRequestHeader() {
+    return Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            'ID',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: ParentThemeColors.textMid,
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Text(
+            'Region',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: ParentThemeColors.textMid,
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Text(
+            'Reason',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: ParentThemeColors.textMid,
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 2,
+          child: Text(
+            'Risk',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: ParentThemeColors.textMid,
+            ),
+          ),
+        ),
+        Expanded(flex: 1, child: Container()),
+      ],
     );
   }
 
@@ -252,11 +258,7 @@ class _AgencyRequestsDashboardScreenState
               color: const Color(0xFFEC5B13).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(
-              Icons.people,
-              color: Color(0xFFEC5B13),
-              size: 20,
-            ),
+            child: const Icon(Icons.people, color: Color(0xFFEC5B13), size: 20),
           ),
           const SizedBox(width: 12),
           const Text(
@@ -281,8 +283,10 @@ class _AgencyRequestsDashboardScreenState
               clipBehavior: Clip.none,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.notifications_outlined,
-                      color: ParentThemeColors.textMid),
+                  icon: const Icon(
+                    Icons.notifications_outlined,
+                    color: ParentThemeColors.textMid,
+                  ),
                   onPressed: () => showAgencyNotificationsSheet(context),
                 ),
                 if (_notifications.unreadCount > 0)
@@ -302,6 +306,8 @@ class _AgencyRequestsDashboardScreenState
             );
           },
         ),
+        const SizedBox(width: 8),
+        const LogoutButton(),
       ],
     );
   }
@@ -577,7 +583,9 @@ class _AgencyRequestsDashboardScreenState
             children: [
               Icon(
                 icon,
-                color: active ? const Color(0xFFEC5B13) : ParentThemeColors.textMid,
+                color: active
+                    ? const Color(0xFFEC5B13)
+                    : ParentThemeColors.textMid,
                 size: 24,
               ),
               const SizedBox(height: 4),
@@ -586,7 +594,9 @@ class _AgencyRequestsDashboardScreenState
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: active ? FontWeight.bold : FontWeight.w500,
-                  color: active ? const Color(0xFFEC5B13) : ParentThemeColors.textMid,
+                  color: active
+                      ? const Color(0xFFEC5B13)
+                      : ParentThemeColors.textMid,
                 ),
               ),
             ],

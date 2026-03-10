@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/text_styles.dart';
+import '../../providers/auth_provider.dart';
 
 class MotherAuthScreen extends StatefulWidget {
   const MotherAuthScreen({super.key});
@@ -30,6 +32,9 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
   );
   final TextEditingController _registerLocationController =
       TextEditingController(text: 'Hadapsar, Pune');
+  final TextEditingController _registerPinController = TextEditingController(
+    text: '1234',
+  );
 
   @override
   void initState() {
@@ -45,16 +50,91 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
     _registerNameController.dispose();
     _registerPhoneController.dispose();
     _registerLocationController.dispose();
+    _registerPinController.dispose();
     super.dispose();
   }
 
-  void _continueToMotherFlow() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Welcome. Moving to mother support dashboard.'),
-      ),
-    );
-    context.go(NavJeevanRoutes.motherHelpRequest);
+  Future<void> _continueToMotherFlow() async {
+    final phone = _loginPhoneController.text.trim();
+    final pin = _loginPinController.text.trim();
+    if (phone.isEmpty || pin.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter phone and PIN.')));
+      return;
+    }
+
+    try {
+      await context.read<AuthProvider>().loginWithPhonePin(
+        phone: phone,
+        pin: pin,
+        expectedRole: 'mother',
+      );
+      if (!mounted) {
+        return;
+      }
+      context.go(NavJeevanRoutes.motherHelpRequest);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Mother login failed: $error')));
+    }
+  }
+
+  Future<void> _registerMother() async {
+    final name = _registerNameController.text.trim();
+    final phone = _registerPhoneController.text.trim();
+    final location = _registerLocationController.text.trim();
+    final pin = _registerPinController.text.trim();
+    if (name.isEmpty || phone.isEmpty || location.isEmpty || pin.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fill all registration fields.')),
+      );
+      return;
+    }
+
+    try {
+      await context.read<AuthProvider>().registerWithPhonePin(
+        phone: phone,
+        pin: pin,
+        role: 'mother',
+        profile: {'name': name, 'location': location},
+      );
+      if (!mounted) {
+        return;
+      }
+      context.go(NavJeevanRoutes.motherHelpRequest);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Mother registration failed: $error')),
+      );
+    }
+  }
+
+  Future<void> _continueMotherWithGoogle() async {
+    try {
+      await context.read<AuthProvider>().signInWithGoogle(
+        expectedRole: 'mother',
+        profile: {'entry': 'google'},
+      );
+      if (!mounted) {
+        return;
+      }
+      context.go(NavJeevanRoutes.motherHelpRequest);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Mother Google login failed: $error')),
+      );
+    }
   }
 
   @override
@@ -180,6 +260,7 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
   }
 
   Widget _buildLoginCard() {
+    final isLoading = context.watch<AuthProvider>().isLoading;
     return _buildAuthCard(
       children: [
         Text('Secure Login', style: NavJeevanTextStyles.headlineMedium),
@@ -230,8 +311,29 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _continueToMotherFlow,
-            child: const Text('Login & Continue'),
+            onPressed: isLoading ? null : _continueToMotherFlow,
+            child: isLoading
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Login & Continue'),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: isLoading ? null : _continueMotherWithGoogle,
+            icon: isLoading
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.g_mobiledata_rounded, size: 24),
+            label: Text(isLoading ? 'Please wait...' : 'Continue with Google'),
           ),
         ),
       ],
@@ -239,6 +341,7 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
   }
 
   Widget _buildRegisterCard() {
+    final isLoading = context.watch<AuthProvider>().isLoading;
     return _buildAuthCard(
       children: [
         Text('Quick Registration', style: NavJeevanTextStyles.headlineMedium),
@@ -275,12 +378,29 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
             prefixIcon: Icon(Icons.location_on_outlined),
           ),
         ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _registerPinController,
+          keyboardType: TextInputType.number,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'Set 4-digit PIN',
+            hintText: 'Enter secure PIN',
+            prefixIcon: Icon(Icons.lock_outline),
+          ),
+        ),
         const SizedBox(height: 22),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _continueToMotherFlow,
-            child: const Text('Register & Continue'),
+            onPressed: isLoading ? null : _registerMother,
+            child: isLoading
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Register & Continue'),
           ),
         ),
       ],

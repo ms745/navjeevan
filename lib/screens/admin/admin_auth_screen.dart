@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/constants/route_names.dart';
+import '../../providers/auth_provider.dart';
 
 class AdminAuthScreen extends StatefulWidget {
   const AdminAuthScreen({super.key});
@@ -17,7 +19,64 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
   bool _obscurePassword = true;
 
   @override
+  void dispose() {
+    _idController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _authenticateAdmin() async {
+    final id = _idController.text.trim();
+    final password = _passwordController.text.trim();
+    if (id.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter admin ID/email and password.')),
+      );
+      return;
+    }
+
+    try {
+      await context.read<AuthProvider>().loginWithRoleIdentifier(
+        identifier: id,
+        password: password,
+        expectedRole: 'admin',
+      );
+      if (!mounted) {
+        return;
+      }
+      context.go(NavJeevanRoutes.adminDashboard);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Admin login failed: $error')));
+    }
+  }
+
+  Future<void> _authenticateAdminWithGoogle() async {
+    try {
+      await context.read<AuthProvider>().signInWithGoogle(
+        expectedRole: 'admin',
+      );
+      if (!mounted) {
+        return;
+      }
+      context.go(NavJeevanRoutes.adminDashboard);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Admin Google login failed: $error')),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isLoading = context.watch<AuthProvider>().isLoading;
     final shortestSide = MediaQuery.sizeOf(context).shortestSide;
     final logoSize = (shortestSide * 0.15).clamp(56.0, 80.0).toDouble();
     final logoBadgePadding = (logoSize * 0.3).clamp(14.0, 24.0).toDouble();
@@ -92,7 +151,7 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
             ),
             const SizedBox(height: 40),
             ElevatedButton(
-              onPressed: () => context.go(NavJeevanRoutes.adminDashboard),
+              onPressed: isLoading ? null : _authenticateAdmin,
               style: ElevatedButton.styleFrom(
                 backgroundColor: NavJeevanColors.primaryRose,
                 foregroundColor: Colors.white,
@@ -103,13 +162,46 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
                 elevation: 4,
                 shadowColor: NavJeevanColors.primaryRose.withValues(alpha: 0.4),
               ),
-              child: const Text(
-                'AUTHENTICATE',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
+              child: isLoading
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'AUTHENTICATE',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: isLoading ? null : _authenticateAdminWithGoogle,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: BorderSide(
+                  color: NavJeevanColors.primaryRose.withValues(alpha: 0.35),
                 ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              icon: isLoading
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.g_mobiledata_rounded, size: 24),
+              label: Text(
+                isLoading ? 'Please wait...' : 'Continue with Google',
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
             const SizedBox(height: 24),

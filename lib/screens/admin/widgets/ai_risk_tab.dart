@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/text_styles.dart';
+// Removed unused google_maps_flutter import as this tab uses a simulated map.
 
 class AIRiskTab extends StatefulWidget {
   const AIRiskTab({super.key});
@@ -134,7 +135,7 @@ class _AIRiskTabState extends State<AIRiskTab> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedScenario,
+                  initialValue: _selectedScenario,
                   decoration: const InputDecoration(
                     isDense: true,
                     labelText: 'Scenario',
@@ -163,7 +164,7 @@ class _AIRiskTabState extends State<AIRiskTab> {
               const SizedBox(width: 10),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedTimeframe,
+                  initialValue: _selectedTimeframe,
                   decoration: const InputDecoration(
                     isDense: true,
                     labelText: 'Window',

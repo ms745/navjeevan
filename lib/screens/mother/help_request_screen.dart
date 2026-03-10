@@ -4,6 +4,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/constants/route_names.dart';
+import '../../core/services/firebase_service.dart';
+import '../../core/utils/validators.dart';
+import '../../core/widgets/logout_button.dart';
 
 class HelpRequestScreen extends StatefulWidget {
   const HelpRequestScreen({super.key});
@@ -14,6 +17,7 @@ class HelpRequestScreen extends StatefulWidget {
 
 class _HelpRequestScreenState extends State<HelpRequestScreen> {
   bool _isAnonymous = true;
+  bool _isLoading = false;
   final TextEditingController _detailsController = TextEditingController();
   final List<String> _reasons = [
     'Financial Difficulty',
@@ -51,6 +55,121 @@ class _HelpRequestScreenState extends State<HelpRequestScreen> {
     }
   }
 
+  Future<void> _submitRequest() async {
+    final reasonError = NavJeevanValidator.validateReasons(
+      _selectedReason != null ? [_selectedReason!] : [],
+    );
+    final regionError = NavJeevanValidator.validateRegion(_selectedRegion);
+
+    if (reasonError != null || regionError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(reasonError ?? regionError!)));
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseService.instance.submitMotherRequest(
+        reasons: _selectedReason != null ? [_selectedReason!] : [],
+        needsCounseling: true,
+        isAnonymous: _isAnonymous,
+        region: _selectedRegion!,
+      );
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text('Request Submitted Successfully! ✓'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 16),
+                Text(
+                  'Your assistance request has been received.',
+                  style: NavJeevanTextStyles.bodyLarge,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: NavJeevanColors.blush.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'What happens next:',
+                        style: NavJeevanTextStyles.titleLarge.copyWith(
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        '• A verified counselor will review your request',
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '• You\'ll receive a call/message within 24 hours',
+                      ),
+                      const SizedBox(height: 8),
+                      Text('• Preferred mode: $_preferredContact'),
+                      const SizedBox(height: 8),
+                      Text('• Estimated first response: $_estimatedResponse'),
+                      const SizedBox(height: 8),
+                      Text(
+                        '• Reference ID: REF-${DateTime.now().millisecondsSinceEpoch.toString().substring(0, 8)}',
+                        style: NavJeevanTextStyles.bodySmall.copyWith(
+                          color: NavJeevanColors.primaryRose,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (_isAnonymous)
+                  const Text(
+                    '🔒 Your request is anonymous and your identity is protected.',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                context.go(NavJeevanRoutes.motherHelpRequest);
+              },
+              child: const Text('Back to Home'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Submission failed: ${e.toString()}')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,6 +184,8 @@ class _HelpRequestScreenState extends State<HelpRequestScreen> {
             icon: const Icon(Icons.person_outline),
             onPressed: () => context.push(NavJeevanRoutes.motherProfile),
           ),
+          const SizedBox(width: 8),
+          const LogoutButton(),
         ],
       ),
       body: SingleChildScrollView(
@@ -314,105 +435,29 @@ class _HelpRequestScreenState extends State<HelpRequestScreen> {
                         )
                         .toList(),
                   ),
-                ],
-              ),
-            ),
+                  const SizedBox(height: 32),
 
-            const SizedBox(height: 32),
-
-            // Submit Button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  // Show success dialog
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (BuildContext dialogContext) => AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      title: const Text('Request Submitted Successfully! ✓'),
-                      content: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(height: 16),
-                            Text(
-                              'Your assistance request has been received.',
-                              style: NavJeevanTextStyles.bodyLarge,
-                            ),
-                            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: NavJeevanColors.blush.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'What happens next:',
-                                    style: NavJeevanTextStyles.titleLarge
-                                        .copyWith(fontSize: 16),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    '• A verified counselor will review your request',
-                                    style: NavJeevanTextStyles.bodyMedium,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '• You\'ll receive a call/message within 24 hours',
-                                    style: NavJeevanTextStyles.bodyMedium,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '• Preferred mode: $_preferredContact',
-                                    style: NavJeevanTextStyles.bodyMedium,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '• Estimated first response: $_estimatedResponse',
-                                    style: NavJeevanTextStyles.bodyMedium,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '• Reference ID: REF-${DateTime.now().millisecondsSinceEpoch.toString().substring(0, 8)}',
-                                    style: NavJeevanTextStyles.bodySmall
-                                        .copyWith(
-                                          color: NavJeevanColors.primaryRose,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            if (_isAnonymous)
-                              Text(
-                                '🔒 Your request is anonymous and your identity is protected.',
-                                style: NavJeevanTextStyles.bodySmall.copyWith(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
+                  // Submit Button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _submitRequest,
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
                                 ),
-                              ),
-                          ],
-                        ),
+                              )
+                            : const Text('Submit Request'),
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(dialogContext),
-                          child: const Text('Back to Home'),
-                        ),
-                      ],
                     ),
-                  );
-                },
-                child: const Text('Submit Request'),
+                  ),
+                ],
               ),
             ),
 
@@ -499,7 +544,9 @@ class _HelpRequestScreenState extends State<HelpRequestScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(color: NavJeevanColors.borderColor.withValues(alpha: 0.5)),
+          top: BorderSide(
+            color: NavJeevanColors.borderColor.withValues(alpha: 0.5),
+          ),
         ),
       ),
       child: BottomNavigationBar(

@@ -1,0 +1,166 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check authentication
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to get user's role from users collection
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return getUserRole() == 'admin';
+    }
+
+    // Users collection: User profiles and role assignments
+    match /users/{userId} {
+      // Users can read/write their own profile
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Admins can read all user profiles
+      allow read: if isAuthenticated() && isAdmin();
+    }
+
+    // Mother requests collection
+    match /mother_requests/{requestId} {
+      // Mothers can read/write their own requests
+      allow create: if isAuthenticated() && getUserRole() == 'mother';
+      allow read, update: if isAuthenticated() && (
+        getUserRole() == 'mother' ||
+        isAdmin() ||
+        resource.data.userId == request.auth.uid
+      );
+      
+      // Counselors (accessed through agencies) can read assigned requests
+      allow read: if isAuthenticated() && getUserRole() == 'agency';
+    }
+
+    // Adoption applications collection
+    match /adoptive_families/{familyId} {
+      // Parents can create and read their own applications
+      allow create: if isAuthenticated() && getUserRole() == 'parent';
+      allow read, update: if isAuthenticated() && (
+        getUserRole() == 'parent' && resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    // Verification queue collection (for admin verification process)
+    match /verification_queue/{applicationId} {
+      // Admins can read all items
+      allow read: if isAuthenticated() && isAdmin();
+      
+      // Admins can update verification status
+      allow update: if isAuthenticated() && isAdmin();
+      
+      // Parents can read their own verification status
+      allow read: if isAuthenticated() && getUserRole() == 'parent' && 
+        resource.data.userId == request.auth.uid;
+    }
+
+    // Agency/NGO collection
+    match /agencies/{agencyId} {
+      // Authenticated users can read agency info
+      allow read: if isAuthenticated();
+      
+      // Only admins can write agency data
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // Agency requests collection
+    match /agency_requests/{requestId} {
+      // Agencies can create requests
+      allow create: if isAuthenticated() && getUserRole() == 'agency';
+      
+      // Agencies can read requests they created
+      allow read, update: if isAuthenticated() && (
+        getUserRole() == 'agency' && resource.data.agencyId == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    // Counselor management collection
+    match /counselor_management/{counselorId} {
+      // Agencies can read/write their counselors
+      allow read, write: if isAuthenticated() && getUserRole() == 'agency';
+      
+      // Admins can read all
+      allow read: if isAuthenticated() && isAdmin();
+    }
+
+    // Admin analytics/reports collection
+    match /admin_reports/{reportId} {
+      // Only admins can access
+      allow read, write: if isAuthenticated() && isAdmin();
+    }
+
+    // NGO support data (public access for view-only)
+    match /ngo_locations/{ngoId} {
+      // Anyone authenticated can read
+      allow read: if isAuthenticated();
+      
+      // Only admins can write
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // Documents/Files metadata collection
+    match /documents/{docId} {
+      // Users can read their own documents
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
+      
+      // Users can create their own document metadata
+      allow create: if isAuthenticated();
+      
+      // Only owners and admins can update/delete
+      allow update, delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
+    }
+
+    // Counselor assignments collection
+    match /counselor_assignments/{assignmentId} {
+      // Agencies can create assignments
+      allow create: if isAuthenticated() && getUserRole() == 'agency';
+      
+      // Users can read their own assignments
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.counselorEmail == request.auth.token.email ||
+        getUserRole() == 'agency' ||
+        isAdmin()
+      );
+      
+      // Agencies can update assignments they created
+      allow update: if isAuthenticated() && (
+        getUserRole() == 'agency' ||
+        isAdmin()
+      );
+    }
+
+    // Counselor status collection (tracks availability)
+    match /counselor_status/{counselorEmail} {
+      // Anyone authenticated can read counselor status
+      allow read: if isAuthenticated();
+      
+      // Agencies and admins can update status
+      allow update: if isAuthenticated() && (
+        getUserRole() == 'agency' ||
+        isAdmin()
+      );
+    }
+
+    // Catch-all for unspecified collections: deny all
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "459769965590",
+    "project_id": "navjeevan-app-630",
+    "storage_bucket": "navjeevan-app-630.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:459769965590:android:0c34f58ec48486f10a9937",
+        "android_client_info": {
+          "package_name": "com.example.navjeevan"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "459769965590-n72hroqs5v2p3c3b4cb8iojdk5lbp7mm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.navjeevan",
+            "certificate_hash": "0f605c7437d6a508d869cf0582b048c49764e62a"
+          }
+        },
+        {
+          "client_id": "459769965590-v19dcig1p4uq50mclbtnv6fsmamlfnru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgB1FRrWmMaR4TiOQ-x81rOakrmVEdtHM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "459769965590-v19dcig1p4uq50mclbtnv6fsmamlfnru.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "459769965590-9aletsjo03f26obm33r5m13dprbk17ll.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.navjeevan",
+                "app_store_id": "12345678"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
