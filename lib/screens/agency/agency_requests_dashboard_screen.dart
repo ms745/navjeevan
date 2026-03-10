@@ -21,6 +21,7 @@ class _AgencyRequestsDashboardScreenState
   final AgencyNotificationCenter _notifications =
       AgencyNotificationCenter.instance;
   String _selectedFilter = 'All';
+  final Map<String, String> _assignedCounselorByRequest = {};
   final Map<String, String> _requestStatuses = {
     for (final r in DummyAgencyData.motherSupportRequests)
       r.requestId: r.status,
@@ -81,7 +82,7 @@ class _AgencyRequestsDashboardScreenState
                 title: const Text('Assign Counselor'),
                 onTap: () {
                   Navigator.pop(context);
-                  _updateRequestStatus(request['id']!, 'Assigned');
+                  _openQuickAssignModal(request);
                 },
               ),
               ListTile(
@@ -105,6 +106,110 @@ class _AgencyRequestsDashboardScreenState
         );
       },
     );
+  }
+
+  void _openQuickAssignModal(Map<String, String> request) {
+    final candidates =
+        DummyAgencyData.agencyCounsellors
+            .where((c) => c.status == 'available')
+            .toList()
+          ..sort(
+            (a, b) => (a.activeCases / a.maxCases).compareTo(
+              b.activeCases / b.maxCases,
+            ),
+          );
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: ParentThemeColors.pureWhite,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(12),
+            children: [
+              const Text(
+                'Quick Assign Counselor',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: ParentThemeColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...candidates.map((counselor) {
+                final loadPercent =
+                    ((counselor.activeCases / counselor.maxCases) * 100)
+                        .toStringAsFixed(0);
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  leading: CircleAvatar(
+                    backgroundImage: NetworkImage(counselor.image),
+                  ),
+                  title: Text(
+                    counselor.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Text('${counselor.specialty} • $loadPercent% load'),
+                  trailing: TextButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _assignCounselorToRequest(request, counselor);
+                    },
+                    child: const Text('Assign'),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _assignCounselorToRequest(
+    Map<String, String> request,
+    Counsellor counselor,
+  ) async {
+    final requestId = request['id'] ?? '';
+    final requestType = request['type'] == 'Surrender Support'
+        ? 'mother'
+        : 'parent';
+    final userId = request['userId'] ?? requestId;
+
+    try {
+      await FirebaseService.instance.assignCounselorToRequest(
+        counselorName: counselor.name,
+        counselorEmail: counselor.email ?? '',
+        requestId: requestId,
+        userId: userId,
+        requestType: requestType,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _assignedCounselorByRequest[requestId] = counselor.name;
+        _requestStatuses[requestId] = 'Assigned';
+      });
+      _notifications.push(
+        title: 'Counselor Assigned',
+        message: '${counselor.name} assigned to request $requestId.',
+        category: 'Requests',
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${counselor.name} assigned successfully.'),
+          backgroundColor: ParentThemeColors.successGreen,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to assign counselor.')),
+      );
+    }
   }
 
   void _updateRequestStatus(String requestId, String status) {
@@ -165,13 +270,17 @@ class _AgencyRequestsDashboardScreenState
                         ...docs.take(10).map((doc) {
                           final data = doc.data() as Map<String, dynamic>;
                           return _buildRequestCard({
-                            'id': doc.id.substring(0, 5).toUpperCase(),
+                            'id': doc.id,
                             'region': data['region'] ?? 'Unknown',
                             'reason':
                                 (data['reasons'] as List?)?.join(', ') ??
                                 'No reason',
                             'risk': data['riskLevel'] ?? 'Low',
                             'status': data['status'] ?? 'Pending',
+                            'type': data.containsKey('familyName')
+                                ? 'Adoption Support'
+                                : 'Surrender Support',
+                            'userId': data['userId'] ?? doc.id,
                           });
                         }),
 
@@ -238,7 +347,18 @@ class _AgencyRequestsDashboardScreenState
             ),
           ),
         ),
-        Expanded(flex: 1, child: Container()),
+        Expanded(
+          flex: 2,
+          child: Text(
+            'Status',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: ParentThemeColors.textMid,
+            ),
+          ),
+        ),
+        Expanded(flex: 1, child: SizedBox.shrink()),
       ],
     );
   }
@@ -380,6 +500,10 @@ class _AgencyRequestsDashboardScreenState
 
   Widget _buildRequestCard(Map<String, String> request) {
     final risk = request['risk']!;
+    final requestId = request['id']!;
+    final status =
+        _requestStatuses[requestId] ?? request['status'] ?? 'Pending';
+    final assignedName = _assignedCounselorByRequest[requestId];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -442,6 +566,50 @@ class _AgencyRequestsDashboardScreenState
                 ),
                 textAlign: TextAlign.center,
               ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: status == 'Assigned'
+                        ? ParentThemeColors.infoBlue.withValues(alpha: 0.15)
+                        : ParentThemeColors.borderColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: status == 'Assigned'
+                          ? ParentThemeColors.infoBlue
+                          : ParentThemeColors.textMid,
+                    ),
+                  ),
+                ),
+                if (assignedName != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      assignedName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: ParentThemeColors.textMid,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(width: 12),

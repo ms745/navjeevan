@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/theme/parent_colors.dart';
 import '../../core/constants/dummy_parent_data.dart';
+import '../../core/constants/dummy_agency_data.dart';
+import '../../core/services/firebase_service.dart';
 import '../../core/services/parent_notification_preferences_store.dart';
+import '../../providers/auth_provider.dart';
 
 class ParentSupportScreen extends StatefulWidget {
   const ParentSupportScreen({super.key});
@@ -329,6 +333,135 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
     );
   }
 
+  List<Counsellor> _parentRecommendedCounselors() {
+    final matchKeywords = [
+      'adoption',
+      'family',
+      'legal',
+      'financial',
+      'trauma',
+    ];
+
+    final ranked = DummyAgencyData.agencyCounsellors.where((c) {
+      if (c.status != 'available') return false;
+      final specialty = c.specialty.toLowerCase();
+      return matchKeywords.any((keyword) => specialty.contains(keyword));
+    }).toList();
+
+    ranked.sort((a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0));
+    return ranked.take(4).toList();
+  }
+
+  Future<void> _requestCounselorAssignment(Counsellor counselor) async {
+    final userId = context.read<AuthProvider>().user?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please login again to request assignment.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseService.instance.assignCounselorToRequest(
+        counselorName: counselor.name,
+        counselorEmail: counselor.email ?? '',
+        requestId: 'parent_support_$userId',
+        userId: userId,
+        requestType: 'parent',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${counselor.name} assignment requested.'),
+          backgroundColor: ParentThemeColors.successGreen,
+        ),
+      );
+      _sendSupportNotification('sessionUpdates');
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not request counselor assignment.'),
+        ),
+      );
+    }
+  }
+
+  Widget _buildAvailableCounselorsPanel() {
+    final counselors = _parentRecommendedCounselors();
+    if (counselors.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Available Counselors'),
+        const SizedBox(height: 10),
+        ...counselors.map((counselor) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: ParentThemeColors.pureWhite,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: ParentThemeColors.borderColor.withValues(alpha: 0.6),
+              ),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundImage: NetworkImage(counselor.image),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        counselor.name,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: ParentThemeColors.textDark,
+                        ),
+                      ),
+                      Text(
+                        counselor.specialty,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: ParentThemeColors.textMid,
+                        ),
+                      ),
+                      if (counselor.rating != null)
+                        Text(
+                          '⭐ ${counselor.rating} • ${counselor.yearsExperience ?? 0} yrs',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: ParentThemeColors.textMid,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _requestCounselorAssignment(counselor),
+                  child: const Text('Request'),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
 
   void _requestOrProgressCall(String callType) {
     final callData = _callRequests[callType];
@@ -868,6 +1001,8 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
         children: [
           _buildEmergencyCard(),
           const SizedBox(height: 16),
+          _buildAvailableCounselorsPanel(),
+          const SizedBox(height: 8),
           _buildSectionTitle('Scheduled Counseling Calls'),
           const SizedBox(height: 12),
           _buildCallCard(
@@ -1330,7 +1465,9 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
                         _selectedFaqCategory = index;
                       });
                     },
-                    backgroundColor: ParentThemeColors.skyBlue.withValues(alpha: 0.3),
+                    backgroundColor: ParentThemeColors.skyBlue.withValues(
+                      alpha: 0.3,
+                    ),
                     selectedColor: ParentThemeColors.primaryBlue,
                     labelStyle: TextStyle(
                       color: isSelected
@@ -1585,7 +1722,9 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
+                      color: ParentThemeColors.primaryBlue.withValues(
+                        alpha: 0.3,
+                      ),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
