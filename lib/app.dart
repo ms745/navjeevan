@@ -10,6 +10,12 @@ import 'screens/mother/ngo_support_map_screen.dart';
 import 'screens/mother/counseling_screen.dart';
 import 'screens/mother/counseling_booking_screen.dart';
 import 'screens/mother/mother_profile_screen.dart';
+import 'screens/parent/parent_auth_screen.dart';
+import 'screens/parent/parent_registration_wizard_screen.dart';
+import 'screens/parent/parent_verification_status_screen.dart';
+import 'screens/parent/parent_guidance_screen.dart';
+import 'screens/parent/parent_support_screen.dart';
+import 'screens/parent/parent_profile_screen.dart';
 import 'screens/updated_legal_guidance_screen.dart'; // This will be created in screens/ or root screens folder
 
 class NavJeevanApp extends StatelessWidget {
@@ -53,6 +59,30 @@ class NavJeevanApp extends StatelessWidget {
         GoRoute(
           path: NavJeevanRoutes.motherProfile,
           builder: (context, state) => const MotherProfileScreen(),
+        ),
+        GoRoute(
+          path: NavJeevanRoutes.parentAuth,
+          builder: (context, state) => const ParentAuthScreen(),
+        ),
+        GoRoute(
+          path: NavJeevanRoutes.parentRegistrationWizard,
+          builder: (context, state) => const ParentRegistrationWizardScreen(),
+        ),
+        GoRoute(
+          path: NavJeevanRoutes.parentVerificationStatus,
+          builder: (context, state) => const ParentVerificationStatusScreen(),
+        ),
+        GoRoute(
+          path: NavJeevanRoutes.parentGuidance,
+          builder: (context, state) => const ParentGuidanceScreen(),
+        ),
+        GoRoute(
+          path: NavJeevanRoutes.parentSupport,
+          builder: (context, state) => const ParentSupportScreen(),
+        ),
+        GoRoute(
+          path: NavJeevanRoutes.parentProfile,
+          builder: (context, state) => const ParentProfileScreen(),
         ),
         GoRoute(
           path: NavJeevanRoutes.legalGuidance,

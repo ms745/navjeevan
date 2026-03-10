@@ -56,9 +56,7 @@ class RoleSelectScreen extends StatelessWidget {
                 subtitle: 'Legal adoption registration and document tracking',
                 icon: Icons.family_restroom_rounded,
                 color: NavJeevanColors.petalLight,
-                onTap: () {
-                  // Navigate to parent flow
-                },
+                onTap: () => context.push(NavJeevanRoutes.parentAuth),
               ),
               const SizedBox(height: 16),
               _buildRoleCard(
