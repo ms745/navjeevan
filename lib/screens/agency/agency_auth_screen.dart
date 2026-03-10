@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/theme/parent_colors.dart';
+import '../../core/widgets/error_popup.dart';
 import '../../providers/auth_provider.dart';
 
 class AgencyAuthScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class AgencyAuthScreen extends StatefulWidget {
 class _AgencyAuthScreenState extends State<AgencyAuthScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _isAuthActionInProgress = false;
   final TextEditingController _loginIdController = TextEditingController(
     text: 'NGO101',
   );
@@ -52,13 +54,25 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
     super.dispose();
   }
 
+  Future<void> _runAuthAction(Future<void> Function() action) async {
+    if (_isAuthActionInProgress) {
+      return;
+    }
+    setState(() => _isAuthActionInProgress = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        setState(() => _isAuthActionInProgress = false);
+      }
+    }
+  }
+
   Future<void> _enterAgencySystem() async {
     final identifier = _loginIdController.text.trim();
     final password = _loginPinController.text.trim();
     if (identifier.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter agency ID/email and PIN.')),
-      );
+      showErrorBottomPopup(context, 'Enter agency ID/email and PIN.');
       return;
     }
 
@@ -76,9 +90,7 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Agency login failed: $error')));
+      showErrorBottomPopup(context, 'Agency login failed: $error');
     }
   }
 
@@ -95,9 +107,7 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Agency Google login failed: $error')),
-      );
+      showErrorBottomPopup(context, 'Agency Google login failed: $error');
     }
   }
 
@@ -111,17 +121,11 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
         registrationNo.isEmpty ||
         email.isEmpty ||
         password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fill all registration fields.')),
-      );
+      showErrorBottomPopup(context, 'Fill all registration fields.');
       return;
     }
     if (password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password must be at least 6 characters.'),
-        ),
-      );
+      showErrorBottomPopup(context, 'Password must be at least 6 characters.');
       return;
     }
 
@@ -143,9 +147,7 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Registration failed: $error')));
+      showErrorBottomPopup(context, 'Registration failed: $error');
     }
   }
 
@@ -282,7 +284,8 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
   }
 
   Widget _buildLoginCard() {
-    final isLoading = context.watch<AuthProvider>().isLoading;
+    final isLoading =
+        context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
     return SingleChildScrollView(
       child: Container(
         padding: const EdgeInsets.all(18),
@@ -341,7 +344,9 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: isLoading ? null : _enterAgencySystem,
+                onPressed: isLoading
+                    ? null
+                    : () => _runAuthAction(_enterAgencySystem),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ParentThemeColors.primaryBlue,
                   foregroundColor: ParentThemeColors.pureWhite,
@@ -365,7 +370,9 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: isLoading ? null : _continueAgencyWithGoogle,
+                onPressed: isLoading
+                    ? null
+                    : () => _runAuthAction(_continueAgencyWithGoogle),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   side: BorderSide(
@@ -391,7 +398,8 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
   }
 
   Widget _buildRegisterCard() {
-    final isLoading = context.watch<AuthProvider>().isLoading;
+    final isLoading =
+        context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
     return SingleChildScrollView(
       child: Container(
         padding: const EdgeInsets.all(18),
@@ -466,7 +474,9 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: isLoading ? null : _registerAgency,
+                onPressed: isLoading
+                    ? null
+                    : () => _runAuthAction(_registerAgency),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ParentThemeColors.primaryBlue,
                   foregroundColor: ParentThemeColors.pureWhite,

@@ -6,6 +6,7 @@ import '../../core/theme/text_styles.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/services/firebase_service.dart';
 import '../../core/utils/validators.dart';
+import '../../core/widgets/error_popup.dart';
 import '../../core/widgets/logout_button.dart';
 
 class HelpRequestScreen extends StatefulWidget {
@@ -62,9 +63,7 @@ class _HelpRequestScreenState extends State<HelpRequestScreen> {
     final regionError = NavJeevanValidator.validateRegion(_selectedRegion);
 
     if (reasonError != null || regionError != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(reasonError ?? regionError!)));
+      showErrorBottomPopup(context, reasonError ?? regionError!);
       return;
     }
 
@@ -162,9 +161,7 @@ class _HelpRequestScreenState extends State<HelpRequestScreen> {
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Submission failed: ${e.toString()}')),
-      );
+      showErrorBottomPopup(context, 'Submission failed: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

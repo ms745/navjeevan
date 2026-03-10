@@ -6,6 +6,7 @@ import '../../core/constants/route_names.dart';
 import '../../core/theme/parent_colors.dart';
 import '../../core/constants/dummy_parent_data.dart';
 import '../../core/services/parent_notification_preferences_store.dart';
+import '../../core/widgets/error_popup.dart';
 
 class ParentProfileScreen extends StatefulWidget {
   const ParentProfileScreen({super.key});
@@ -197,9 +198,7 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
       if (!mounted) return;
 
       if (selectedName == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('No file selected.')));
+        showErrorBottomPopup(context, 'No file selected.');
         return;
       }
 
@@ -211,11 +210,9 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to access selected source right now.'),
-          backgroundColor: ParentThemeColors.errorRed,
-        ),
+      showErrorBottomPopup(
+        context,
+        'Unable to access selected source right now.',
       );
     }
   }
@@ -988,7 +985,9 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
       decoration: BoxDecoration(
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ParentThemeColors.errorRed.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: ParentThemeColors.errorRed.withValues(alpha: 0.3),
+        ),
         boxShadow: [
           BoxShadow(
             color: ParentThemeColors.errorRed.withValues(alpha: 0.1),

@@ -27,6 +27,7 @@ class AuthProvider extends ChangeNotifier {
       try {
         final doc = await _db.collection('users').doc(_user!.uid).get();
         _userRole = doc.data()?['role'] as String?;
+        _userRole ??= _inferRoleFromEmail(_user!.email);
       } catch (_) {
         _userRole = _inferRoleFromEmail(_user!.email);
       }
@@ -96,7 +97,7 @@ class AuthProvider extends ChangeNotifier {
     final normalizedEmail = _normalizeIdentifierToEmail(identifier);
     await loginWithEmail(email: normalizedEmail, password: password);
 
-    final role = _userRole ?? _inferRoleFromEmail(_user?.email);
+    final role = await _resolveRoleAndBackfill(expectedRole: expectedRole);
     if (role != expectedRole) {
       await _auth.signOut();
       throw FirebaseAuthException(
@@ -115,7 +116,7 @@ class AuthProvider extends ChangeNotifier {
     final password = _pinToPassword(pin);
     await loginWithEmail(email: email, password: password);
 
-    final role = _userRole ?? _inferRoleFromEmail(_user?.email);
+    final role = await _resolveRoleAndBackfill(expectedRole: expectedRole);
     if (role != expectedRole) {
       await _auth.signOut();
       throw FirebaseAuthException(
@@ -213,6 +214,40 @@ class AuthProvider extends ChangeNotifier {
 
   String _pinToPassword(String pin) {
     return 'nvj-$pin-secure';
+  }
+
+  Future<String?> _resolveRoleAndBackfill({String? expectedRole}) async {
+    final current = _auth.currentUser;
+    if (current == null) return null;
+
+    final userDocRef = _db.collection('users').doc(current.uid);
+
+    String? resolvedRole = _userRole;
+    if (resolvedRole == null) {
+      try {
+        final snapshot = await userDocRef.get();
+        resolvedRole = snapshot.data()?['role'] as String?;
+      } catch (_) {}
+    }
+
+    resolvedRole ??= _inferRoleFromEmail(current.email);
+    resolvedRole ??= expectedRole;
+
+    if (resolvedRole != null) {
+      _userRole = resolvedRole;
+      try {
+        await userDocRef.set({
+          'email': current.email,
+          'displayName': current.displayName,
+          'photoUrl': current.photoURL,
+          'role': resolvedRole,
+          'updatedAt': FieldValue.serverTimestamp(),
+          'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (_) {}
+    }
+
+    return resolvedRole;
   }
 
   String? _inferRoleFromEmail(String? email) {

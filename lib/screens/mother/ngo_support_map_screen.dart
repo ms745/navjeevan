@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/constants/route_names.dart';
+import '../../core/widgets/error_popup.dart';
 
 class NgoSupportMapScreen extends StatefulWidget {
   const NgoSupportMapScreen({super.key});
@@ -167,9 +168,7 @@ class _NgoSupportMapScreenState extends State<NgoSupportMapScreen> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Unable to open dialer on this device.')),
-    );
+    showErrorBottomPopup(context, 'Unable to open dialer on this device.');
   }
 
   @override
@@ -436,7 +435,9 @@ class _NgoSupportMapScreenState extends State<NgoSupportMapScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: _securityColor(securityLevel).withValues(alpha: 0.16),
+                    color: _securityColor(
+                      securityLevel,
+                    ).withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Text(
@@ -594,7 +595,9 @@ class _NgoSupportMapScreenState extends State<NgoSupportMapScreen> {
                     height: 36,
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
-                      color: _securityColor(securityLevel).withValues(alpha: 0.15),
+                      color: _securityColor(
+                        securityLevel,
+                      ).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Center(
@@ -638,7 +641,9 @@ class _NgoSupportMapScreenState extends State<NgoSupportMapScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(color: NavJeevanColors.borderColor.withValues(alpha: 0.5)),
+          top: BorderSide(
+            color: NavJeevanColors.borderColor.withValues(alpha: 0.5),
+          ),
         ),
       ),
       child: BottomNavigationBar(

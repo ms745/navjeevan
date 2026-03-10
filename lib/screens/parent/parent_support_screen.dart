@@ -6,6 +6,7 @@ import '../../core/theme/parent_colors.dart';
 import '../../core/constants/dummy_parent_data.dart';
 import '../../core/constants/dummy_agency_data.dart';
 import '../../core/services/firebase_service.dart';
+import '../../core/widgets/error_popup.dart';
 import '../../core/services/parent_notification_preferences_store.dart';
 import '../../providers/auth_provider.dart';
 
@@ -355,10 +356,9 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
   Future<void> _requestCounselorAssignment(Counsellor counselor) async {
     final userId = context.read<AuthProvider>().user?.uid;
     if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please login again to request assignment.'),
-        ),
+      showErrorBottomPopup(
+        context,
+        'Please login again to request assignment.',
       );
       return;
     }
@@ -382,11 +382,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
       _sendSupportNotification('sessionUpdates');
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not request counselor assignment.'),
-        ),
-      );
+      showErrorBottomPopup(context, 'Could not request counselor assignment.');
     }
   }
 

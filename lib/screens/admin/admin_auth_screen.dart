@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/constants/route_names.dart';
+import '../../core/widgets/error_popup.dart';
 import '../../providers/auth_provider.dart';
 
 class AdminAuthScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
   final _idController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isAuthActionInProgress = false;
 
   @override
   void dispose() {
@@ -25,13 +27,25 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
     super.dispose();
   }
 
+  Future<void> _runAuthAction(Future<void> Function() action) async {
+    if (_isAuthActionInProgress) {
+      return;
+    }
+    setState(() => _isAuthActionInProgress = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        setState(() => _isAuthActionInProgress = false);
+      }
+    }
+  }
+
   Future<void> _authenticateAdmin() async {
     final id = _idController.text.trim();
     final password = _passwordController.text.trim();
     if (id.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter admin ID/email and password.')),
-      );
+      showErrorBottomPopup(context, 'Enter admin ID/email and password.');
       return;
     }
 
@@ -49,9 +63,7 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Admin login failed: $error')));
+      showErrorBottomPopup(context, 'Admin login failed: $error');
     }
   }
 
@@ -68,15 +80,14 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Admin Google login failed: $error')),
-      );
+      showErrorBottomPopup(context, 'Admin Google login failed: $error');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = context.watch<AuthProvider>().isLoading;
+    final isLoading =
+        context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
     final shortestSide = MediaQuery.sizeOf(context).shortestSide;
     final logoSize = (shortestSide * 0.15).clamp(56.0, 80.0).toDouble();
     final logoBadgePadding = (logoSize * 0.3).clamp(14.0, 24.0).toDouble();
@@ -151,7 +162,9 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
             ),
             const SizedBox(height: 40),
             ElevatedButton(
-              onPressed: isLoading ? null : _authenticateAdmin,
+              onPressed: isLoading
+                  ? null
+                  : () => _runAuthAction(_authenticateAdmin),
               style: ElevatedButton.styleFrom(
                 backgroundColor: NavJeevanColors.primaryRose,
                 foregroundColor: Colors.white,
@@ -182,7 +195,9 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: isLoading ? null : _authenticateAdminWithGoogle,
+              onPressed: isLoading
+                  ? null
+                  : () => _runAuthAction(_authenticateAdminWithGoogle),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 side: BorderSide(

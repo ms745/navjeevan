@@ -8,6 +8,7 @@ import '../../core/theme/text_styles.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/services/firebase_service.dart';
 import '../../core/constants/dummy_agency_data.dart';
+import '../../core/widgets/error_popup.dart';
 import '../../providers/auth_provider.dart';
 
 class CounselingScreen extends StatefulWidget {
@@ -94,9 +95,7 @@ class _CounselingScreenState extends State<CounselingScreen> {
       return;
     }
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Unable to open dialer right now.')),
-    );
+    showErrorBottomPopup(context, 'Unable to open dialer right now.');
   }
 
   @override

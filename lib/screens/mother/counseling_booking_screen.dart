@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/text_styles.dart';
+import '../../core/widgets/error_popup.dart';
 
 class CounselingBookingScreen extends StatefulWidget {
   final Map<String, dynamic>? counselor;
@@ -50,11 +51,7 @@ class _CounselingBookingScreenState extends State<CounselingBookingScreen> {
 
   void _confirmBooking() {
     if (_selectedDate == null || _selectedSlot == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select date and time slot first.'),
-        ),
-      );
+      showErrorBottomPopup(context, 'Please select date and time slot first.');
       return;
     }
 

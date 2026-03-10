@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/text_styles.dart';
+import '../../core/widgets/error_popup.dart';
 import '../../providers/auth_provider.dart';
 
 class MotherAuthScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class MotherAuthScreen extends StatefulWidget {
 class _MotherAuthScreenState extends State<MotherAuthScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _isAuthActionInProgress = false;
 
   final TextEditingController _loginPhoneController = TextEditingController(
     text: '9876543210',
@@ -54,20 +56,32 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
     super.dispose();
   }
 
+  Future<void> _runAuthAction(Future<void> Function() action) async {
+    if (_isAuthActionInProgress) {
+      return;
+    }
+    setState(() => _isAuthActionInProgress = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        setState(() => _isAuthActionInProgress = false);
+      }
+    }
+  }
+
   Future<void> _continueToMotherFlow() async {
     final phone = _loginPhoneController.text.trim();
-    final pin = _loginPinController.text.trim();
-    if (phone.isEmpty || pin.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enter phone and PIN.')));
+    final password = _loginPinController.text.trim();
+    if (phone.isEmpty || password.isEmpty) {
+      showErrorBottomPopup(context, 'Enter phone and password.');
       return;
     }
 
     try {
       await context.read<AuthProvider>().loginWithPhonePin(
         phone: phone,
-        pin: pin,
+        pin: password,
         expectedRole: 'mother',
       );
       if (!mounted) {
@@ -78,9 +92,7 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Mother login failed: $error')));
+      showErrorBottomPopup(context, 'Mother login failed: $error');
     }
   }
 
@@ -88,18 +100,16 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
     final name = _registerNameController.text.trim();
     final phone = _registerPhoneController.text.trim();
     final location = _registerLocationController.text.trim();
-    final pin = _registerPinController.text.trim();
-    if (name.isEmpty || phone.isEmpty || location.isEmpty || pin.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fill all registration fields.')),
-      );
+    final password = _registerPinController.text.trim();
+    if (name.isEmpty || phone.isEmpty || location.isEmpty || password.isEmpty) {
+      showErrorBottomPopup(context, 'Fill all registration fields.');
       return;
     }
 
     try {
       await context.read<AuthProvider>().registerWithPhonePin(
         phone: phone,
-        pin: pin,
+        pin: password,
         role: 'mother',
         profile: {'name': name, 'location': location},
       );
@@ -111,9 +121,7 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Mother registration failed: $error')),
-      );
+      showErrorBottomPopup(context, 'Mother registration failed: $error');
     }
   }
 
@@ -131,9 +139,7 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Mother Google login failed: $error')),
-      );
+      showErrorBottomPopup(context, 'Mother Google login failed: $error');
     }
   }
 
@@ -260,7 +266,8 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
   }
 
   Widget _buildLoginCard() {
-    final isLoading = context.watch<AuthProvider>().isLoading;
+    final isLoading =
+        context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
     return _buildAuthCard(
       children: [
         Text('Secure Login', style: NavJeevanTextStyles.headlineMedium),
@@ -282,11 +289,11 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
         const SizedBox(height: 12),
         TextField(
           controller: _loginPinController,
-          keyboardType: TextInputType.number,
+          keyboardType: TextInputType.visiblePassword,
           obscureText: true,
           decoration: const InputDecoration(
-            labelText: '4-digit PIN',
-            hintText: 'Enter secure PIN',
+            labelText: 'Password',
+            hintText: 'Enter secure password',
             prefixIcon: Icon(Icons.lock_outline),
           ),
         ),
@@ -311,7 +318,9 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: isLoading ? null : _continueToMotherFlow,
+            onPressed: isLoading
+                ? null
+                : () => _runAuthAction(_continueToMotherFlow),
             child: isLoading
                 ? const SizedBox(
                     height: 18,
@@ -325,7 +334,9 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: isLoading ? null : _continueMotherWithGoogle,
+            onPressed: isLoading
+                ? null
+                : () => _runAuthAction(_continueMotherWithGoogle),
             icon: isLoading
                 ? const SizedBox(
                     height: 18,
@@ -341,7 +352,8 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
   }
 
   Widget _buildRegisterCard() {
-    final isLoading = context.watch<AuthProvider>().isLoading;
+    final isLoading =
+        context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
     return _buildAuthCard(
       children: [
         Text('Quick Registration', style: NavJeevanTextStyles.headlineMedium),
@@ -381,11 +393,11 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
         const SizedBox(height: 12),
         TextField(
           controller: _registerPinController,
-          keyboardType: TextInputType.number,
+          keyboardType: TextInputType.visiblePassword,
           obscureText: true,
           decoration: const InputDecoration(
-            labelText: 'Set 4-digit PIN',
-            hintText: 'Enter secure PIN',
+            labelText: 'Set Password',
+            hintText: 'Enter secure password',
             prefixIcon: Icon(Icons.lock_outline),
           ),
         ),
@@ -393,7 +405,7 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: isLoading ? null : _registerMother,
+            onPressed: isLoading ? null : () => _runAuthAction(_registerMother),
             child: isLoading
                 ? const SizedBox(
                     height: 18,

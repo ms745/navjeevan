@@ -28,5 +28,6 @@ Then run:
 
 flutter clean
 flutter pub get
+flutter pub upgrade
 flutter run
 

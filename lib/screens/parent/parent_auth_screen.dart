@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/theme/parent_colors.dart';
+import '../../core/widgets/error_popup.dart';
 import '../../providers/auth_provider.dart';
 
 class ParentAuthScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class ParentAuthScreen extends StatefulWidget {
 class _ParentAuthScreenState extends State<ParentAuthScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _isAuthActionInProgress = false;
 
   final TextEditingController _loginPhoneController = TextEditingController(
     text: '9876509999',
@@ -45,20 +47,32 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
     super.dispose();
   }
 
+  Future<void> _runAuthAction(Future<void> Function() action) async {
+    if (_isAuthActionInProgress) {
+      return;
+    }
+    setState(() => _isAuthActionInProgress = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        setState(() => _isAuthActionInProgress = false);
+      }
+    }
+  }
+
   Future<void> _continueToParentFlow() async {
     final phone = _loginPhoneController.text.trim();
-    final pin = _loginPinController.text.trim();
-    if (phone.isEmpty || pin.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enter phone and PIN.')));
+    final password = _loginPinController.text.trim();
+    if (phone.isEmpty || password.isEmpty) {
+      showErrorBottomPopup(context, 'Enter phone and password.');
       return;
     }
 
     try {
       await context.read<AuthProvider>().loginWithPhonePin(
         phone: phone,
-        pin: pin,
+        pin: password,
         expectedRole: 'parent',
       );
       if (!mounted) {
@@ -69,26 +83,22 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Parent login failed: $error')));
+      showErrorBottomPopup(context, 'Parent login failed: $error');
     }
   }
 
   Future<void> _startRegistration() async {
     final phone = _registerPhoneController.text.trim();
-    final pin = _registerPinController.text.trim();
-    if (phone.isEmpty || pin.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter phone and PIN to register.')),
-      );
+    final password = _registerPinController.text.trim();
+    if (phone.isEmpty || password.isEmpty) {
+      showErrorBottomPopup(context, 'Enter phone and password to register.');
       return;
     }
 
     try {
       await context.read<AuthProvider>().registerWithPhonePin(
         phone: phone,
-        pin: pin,
+        pin: password,
         role: 'parent',
       );
       if (!mounted) {
@@ -99,9 +109,7 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Parent registration failed: $error')),
-      );
+      showErrorBottomPopup(context, 'Parent registration failed: $error');
     }
   }
 
@@ -119,9 +127,7 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Parent Google login failed: $error')),
-      );
+      showErrorBottomPopup(context, 'Parent Google login failed: $error');
     }
   }
 
@@ -301,7 +307,8 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
   }
 
   Widget _buildLoginCard() {
-    final isLoading = context.watch<AuthProvider>().isLoading;
+    final isLoading =
+        context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
     return _buildAuthCard(
       children: [
         const Text(
@@ -346,11 +353,11 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
         const SizedBox(height: 12),
         TextField(
           controller: _loginPinController,
-          keyboardType: TextInputType.number,
+          keyboardType: TextInputType.visiblePassword,
           obscureText: true,
           decoration: InputDecoration(
-            labelText: '4-digit PIN',
-            hintText: 'Enter secure PIN',
+            labelText: 'Password',
+            hintText: 'Enter secure password',
             prefixIcon: Icon(
               Icons.lock_outline,
               color: ParentThemeColors.primaryBlue,
@@ -407,7 +414,9 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: isLoading ? null : _continueToParentFlow,
+            onPressed: isLoading
+                ? null
+                : () => _runAuthAction(_continueToParentFlow),
             style: ElevatedButton.styleFrom(
               backgroundColor: ParentThemeColors.primaryBlue,
               foregroundColor: ParentThemeColors.pureWhite,
@@ -437,7 +446,9 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: isLoading ? null : _continueParentWithGoogle,
+            onPressed: isLoading
+                ? null
+                : () => _runAuthAction(_continueParentWithGoogle),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
@@ -456,7 +467,8 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
   }
 
   Widget _buildRegisterCard() {
-    final isLoading = context.watch<AuthProvider>().isLoading;
+    final isLoading =
+        context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
     return _buildAuthCard(
       children: [
         const Text(
@@ -519,11 +531,11 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
         const SizedBox(height: 12),
         TextField(
           controller: _registerPinController,
-          keyboardType: TextInputType.number,
+          keyboardType: TextInputType.visiblePassword,
           obscureText: true,
           decoration: InputDecoration(
-            labelText: 'Set 4-digit PIN',
-            hintText: 'Create secure PIN',
+            labelText: 'Set Password',
+            hintText: 'Create secure password',
             prefixIcon: Icon(
               Icons.lock_outline,
               color: ParentThemeColors.primaryBlue,
@@ -548,7 +560,9 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: isLoading ? null : _startRegistration,
+            onPressed: isLoading
+                ? null
+                : () => _runAuthAction(_startRegistration),
             style: ElevatedButton.styleFrom(
               backgroundColor: ParentThemeColors.primaryBlue,
               foregroundColor: ParentThemeColors.pureWhite,

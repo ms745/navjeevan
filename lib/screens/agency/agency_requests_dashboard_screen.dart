@@ -6,6 +6,7 @@ import '../../core/constants/route_names.dart';
 import '../../core/services/agency_notification_center.dart';
 import '../../core/services/firebase_service.dart';
 import '../../core/theme/parent_colors.dart';
+import '../../core/widgets/error_popup.dart';
 import '../../core/widgets/logout_button.dart';
 
 class AgencyRequestsDashboardScreen extends StatefulWidget {
@@ -206,9 +207,7 @@ class _AgencyRequestsDashboardScreenState
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to assign counselor.')),
-      );
+      showErrorBottomPopup(context, 'Failed to assign counselor.');
     }
   }
 

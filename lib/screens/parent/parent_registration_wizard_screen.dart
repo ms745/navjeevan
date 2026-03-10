@@ -5,6 +5,7 @@ import '../../core/constants/route_names.dart';
 import '../../core/theme/parent_colors.dart';
 import '../../core/services/firebase_service.dart';
 import '../../core/utils/validators.dart';
+import '../../core/widgets/error_popup.dart';
 
 class ParentRegistrationWizardScreen extends StatefulWidget {
   const ParentRegistrationWizardScreen({super.key});
@@ -68,9 +69,7 @@ class _ParentRegistrationWizardScreenState
         _incomeController.text,
       );
       if (incomeError != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(incomeError), backgroundColor: Colors.red),
-        );
+        showErrorBottomPopup(context, incomeError);
         setState(() => _isSubmitting = false);
         return;
       }
@@ -93,12 +92,7 @@ class _ParentRegistrationWizardScreenState
       );
       context.push(NavJeevanRoutes.parentVerificationStatus);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showErrorBottomPopup(context, 'Failed: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
