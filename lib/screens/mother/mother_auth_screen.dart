@@ -214,7 +214,7 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: NavJeevanColors.blush.withOpacity(0.45),
+            color: NavJeevanColors.blush.withValues(alpha: 0.45),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: NavJeevanColors.borderColor),
           ),

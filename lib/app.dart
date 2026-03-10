@@ -16,7 +16,14 @@ import 'screens/parent/parent_verification_status_screen.dart';
 import 'screens/parent/parent_guidance_screen.dart';
 import 'screens/parent/parent_support_screen.dart';
 import 'screens/parent/parent_profile_screen.dart';
-import 'screens/updated_legal_guidance_screen.dart'; // This will be created in screens/ or root screens folder
+import 'screens/agency/agency_auth_screen.dart';
+import 'screens/agency/agency_requests_dashboard_screen.dart';
+import 'screens/agency/agency_welfare_monitoring_screen.dart';
+import 'screens/agency/agency_counselor_management_screen.dart';
+import 'screens/agency/agency_profile_screen.dart';
+import 'screens/updated_legal_guidance_screen.dart';
+import 'screens/admin/admin_auth_screen.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
 
 class NavJeevanApp extends StatelessWidget {
   const NavJeevanApp({super.key});
@@ -85,8 +92,37 @@ class NavJeevanApp extends StatelessWidget {
           builder: (context, state) => const ParentProfileScreen(),
         ),
         GoRoute(
+          path: NavJeevanRoutes.agencyAuth,
+          builder: (context, state) => const AgencyAuthScreen(),
+        ),
+        GoRoute(
+          path: NavJeevanRoutes.agencyRequestsDashboard,
+          builder: (context, state) => const AgencyRequestsDashboardScreen(),
+        ),
+        GoRoute(
+          path: NavJeevanRoutes.agencyWelfareMonitoring,
+          builder: (context, state) => const AgencyWelfareMonitoringScreen(),
+        ),
+        GoRoute(
+          path: NavJeevanRoutes.agencyCounselorManagement,
+          builder: (context, state) =>
+              const AgencyCounselorManagementScreen(),
+        ),
+        GoRoute(
+          path: NavJeevanRoutes.agencyProfile,
+          builder: (context, state) => const AgencyProfileScreen(),
+        ),
+        GoRoute(
           path: NavJeevanRoutes.legalGuidance,
           builder: (context, state) => const UpdatedLegalGuidanceScreen(),
+        ),
+        GoRoute(
+          path: NavJeevanRoutes.adminAuth,
+          builder: (context, state) => const AdminAuthScreen(),
+        ),
+        GoRoute(
+          path: NavJeevanRoutes.adminDashboard,
+          builder: (context, state) => const AdminDashboardScreen(),
         ),
       ],
     );

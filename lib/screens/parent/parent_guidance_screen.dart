@@ -138,7 +138,7 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
                 )
               : null,
           filled: true,
-          fillColor: ParentThemeColors.skyBlue.withOpacity(0.3),
+          fillColor: ParentThemeColors.skyBlue.withValues(alpha: 0.3),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -173,7 +173,7 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
                   _selectedCategory = category;
                 });
               },
-              backgroundColor: ParentThemeColors.skyBlue.withOpacity(0.2),
+              backgroundColor: ParentThemeColors.skyBlue.withValues(alpha: 0.2),
               selectedColor: ParentThemeColors.primaryBlue,
               labelStyle: TextStyle(
                 color: isSelected
@@ -229,7 +229,7 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: ParentThemeColors.skyBlue.withOpacity(0.3),
+              color: ParentThemeColors.skyBlue.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: IconButton(
@@ -276,7 +276,7 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.15),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.15),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -344,11 +344,11 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: ParentThemeColors.borderColor.withOpacity(0.5),
+          color: ParentThemeColors.borderColor.withValues(alpha: 0.5),
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -423,12 +423,12 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isBookmarked
-              ? color.withOpacity(0.3)
-              : ParentThemeColors.borderColor.withOpacity(0.5),
+              ? color.withValues(alpha: 0.3)
+              : ParentThemeColors.borderColor.withValues(alpha: 0.5),
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.08),
+            color: color.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -455,7 +455,7 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon, color: color, size: 28),
@@ -508,7 +508,7 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
+                          color: color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -583,10 +583,10 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
       decoration: BoxDecoration(
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -616,7 +616,7 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon, color: color, size: 32),
@@ -646,7 +646,7 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
         color: ParentThemeColors.pureWhite,
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.textDark.withOpacity(0.1),
+            color: ParentThemeColors.textDark.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -702,7 +702,7 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isActive
-              ? ParentThemeColors.primaryBlue.withOpacity(0.1)
+              ? ParentThemeColors.primaryBlue.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),

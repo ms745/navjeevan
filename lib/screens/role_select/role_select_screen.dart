@@ -65,9 +65,7 @@ class RoleSelectScreen extends StatelessWidget {
                 subtitle: 'Manage mother requests and coordinate support',
                 icon: Icons.groups_rounded,
                 color: NavJeevanColors.blush,
-                onTap: () {
-                  // Navigate to agency flow
-                },
+                onTap: () => context.push(NavJeevanRoutes.agencyAuth),
               ),
               const SizedBox(height: 16),
               _buildRoleCard(
@@ -77,9 +75,7 @@ class RoleSelectScreen extends StatelessWidget {
                     'Analytics, welfare monitoring, and AI risk prediction',
                 icon: Icons.admin_panel_settings_rounded,
                 color: NavJeevanColors.petalLight,
-                onTap: () {
-                  // Navigate to admin flow
-                },
+                onTap: () => context.push(NavJeevanRoutes.adminAuth),
               ),
 
               const SizedBox(height: 48),
@@ -108,11 +104,11 @@ class RoleSelectScreen extends StatelessWidget {
           color: color,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: NavJeevanColors.borderColor.withOpacity(0.5),
+            color: NavJeevanColors.borderColor.withValues(alpha: 0.5),
           ),
           boxShadow: [
             BoxShadow(
-              color: NavJeevanColors.primaryRose.withOpacity(0.05),
+              color: NavJeevanColors.primaryRose.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -153,7 +149,7 @@ class RoleSelectScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: NavJeevanColors.borderColor.withOpacity(0.3)),
+          top: BorderSide(color: NavJeevanColors.borderColor.withValues(alpha: 0.3)),
         ),
       ),
       child: Row(

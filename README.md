@@ -26,7 +26,7 @@ Add your Google Maps API key before running the map screen:
 
 Then run:
 
-- flutter clean
-- flutter pub get
-- flutter run
+flutter clean
+flutter pub get
+flutter run
 

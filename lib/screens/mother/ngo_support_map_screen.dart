@@ -291,7 +291,7 @@ class _NgoSupportMapScreenState extends State<NgoSupportMapScreen> {
         height: 48,
         width: 48,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
+          color: Colors.white.withValues(alpha: 0.9),
           shape: BoxShape.circle,
           boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
         ),
@@ -383,7 +383,7 @@ class _NgoSupportMapScreenState extends State<NgoSupportMapScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
         boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
       ),
@@ -436,7 +436,7 @@ class _NgoSupportMapScreenState extends State<NgoSupportMapScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: _securityColor(securityLevel).withOpacity(0.16),
+                    color: _securityColor(securityLevel).withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Text(
@@ -594,12 +594,12 @@ class _NgoSupportMapScreenState extends State<NgoSupportMapScreen> {
                     height: 36,
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
-                      color: _securityColor(securityLevel).withOpacity(0.15),
+                      color: _securityColor(securityLevel).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Center(
                       child: Text(
-                        '$securityLevel',
+                        securityLevel,
                         style: NavJeevanTextStyles.bodySmall.copyWith(
                           color: _securityColor(securityLevel),
                           fontWeight: FontWeight.w700,
@@ -638,7 +638,7 @@ class _NgoSupportMapScreenState extends State<NgoSupportMapScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(color: NavJeevanColors.borderColor.withOpacity(0.5)),
+          top: BorderSide(color: NavJeevanColors.borderColor.withValues(alpha: 0.5)),
         ),
       ),
       child: BottomNavigationBar(

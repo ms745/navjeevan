@@ -18,6 +18,17 @@ class NavJeevanRoutes {
   static const parentSupport = '/parent/support';
   static const parentProfile = '/parent/profile';
 
+  // Agency / NGO routes
+  static const agencyAuth = '/agency/auth';
+  static const agencyRequestsDashboard = '/agency/requests-dashboard';
+  static const agencyWelfareMonitoring = '/agency/welfare-monitoring';
+  static const agencyCounselorManagement = '/agency/counselor-management';
+  static const agencyProfile = '/agency/profile';
+
   // Legal/Common
   static const legalGuidance = '/legal-guidance';
+
+  // Admin routes
+  static const adminAuth = '/admin/auth';
+  static const adminDashboard = '/admin/dashboard';
 }

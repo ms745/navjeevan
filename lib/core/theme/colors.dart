@@ -31,4 +31,7 @@ class NavJeevanColors {
   static const cardGradient = LinearGradient(
     colors: [Color(0xFFFFE4EC), Color(0xFFFFF8FA)],
   );
+
+  static const backgroundLight = Color(0xFFF8F9FA);
+  static const emerald = Color(0xFF10B981);
 }

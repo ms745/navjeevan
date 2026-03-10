@@ -28,12 +28,15 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final shortestSide = MediaQuery.sizeOf(context).shortestSide;
+    final brandingSize = (shortestSide * 0.44).clamp(170.0, 230.0).toDouble();
+    final haloSize = (brandingSize * 0.75).toDouble();
+    final logoSize = (brandingSize * 0.58).toDouble();
+
     return Scaffold(
       body: Container(
         width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: NavJeevanColors.bgGradient,
-        ),
+        decoration: const BoxDecoration(gradient: NavJeevanColors.bgGradient),
         child: Column(
           children: [
             const Spacer(),
@@ -42,29 +45,39 @@ class _SplashScreenState extends State<SplashScreen> {
               children: [
                 // Animated Lottie Flower
                 SizedBox(
-                  height: 200,
-                  width: 200,
+                  height: brandingSize,
+                  width: brandingSize,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
                       Container(
-                        width: 150,
-                        height: 150,
-                        decoration: BoxDecoration(
-                          color: NavJeevanColors.blush.withOpacity(0.5),
-                          shape: BoxShape.circle,
-                        ),
-                      ).animate().scale(
-                        duration: 2.seconds,
-                        curve: Curves.easeInOut,
-                      ).blur(begin: const Offset(0, 0), end: const Offset(30, 30)),
-                      
-                      const Icon(
-                        Icons.local_florist_rounded,
-                        size: 100,
-                        color: NavJeevanColors.primaryRose,
-                      ).animate().fade(duration: 1.seconds).scale(delay: 500.ms),
-                      
+                            width: haloSize,
+                            height: haloSize,
+                            decoration: BoxDecoration(
+                              color: NavJeevanColors.blush.withValues(alpha: 0.5),
+                              shape: BoxShape.circle,
+                            ),
+                          )
+                          .animate()
+                          .scale(duration: 2.seconds, curve: Curves.easeInOut)
+                          .blur(
+                            begin: const Offset(0, 0),
+                            end: const Offset(30, 30),
+                          ),
+
+                      ClipRRect(
+                            borderRadius: BorderRadius.circular(logoSize / 2),
+                            child: Image.asset(
+                              'assets/logo.png',
+                              width: logoSize,
+                              height: logoSize,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                          .animate()
+                          .fade(duration: 1.seconds)
+                          .scale(delay: 500.ms),
+
                       // In a real app, use: Lottie.asset('assets/lottie/splash_flower.json')
                     ],
                   ),
@@ -80,7 +93,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 Text(
                   'नव जीवन',
                   style: NavJeevanTextStyles.headlineMedium.copyWith(
-                    color: NavJeevanColors.textDark.withOpacity(0.8),
+                    color: NavJeevanColors.textDark.withValues(alpha: 0.8),
                     fontSize: 24,
                   ),
                 ).animate().fade(delay: 300.ms, duration: 800.ms),
@@ -108,10 +121,17 @@ class _SplashScreenState extends State<SplashScreen> {
                     child: LinearProgressIndicator(
                       value: 0.65,
                       minHeight: 6,
-                      backgroundColor: NavJeevanColors.borderColor.withOpacity(0.3),
-                      valueColor: const AlwaysStoppedAnimation<Color>(NavJeevanColors.roseLight),
+                      backgroundColor: NavJeevanColors.borderColor.withValues(alpha: 
+                        0.3,
+                      ),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        NavJeevanColors.roseLight,
+                      ),
                     ),
-                  ).animate().shimmer(duration: 2.seconds, color: NavJeevanColors.blush),
+                  ).animate().shimmer(
+                    duration: 2.seconds,
+                    color: NavJeevanColors.blush,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Setting up your secure space...',
@@ -123,7 +143,14 @@ class _SplashScreenState extends State<SplashScreen> {
                     children: [
                       _buildBadge(Icons.verified_user_rounded, 'SECURE'),
                       const SizedBox(width: 16),
-                      Container(width: 4, height: 4, decoration: const BoxDecoration(color: NavJeevanColors.textSoft, shape: BoxShape.circle)),
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          color: NavJeevanColors.textSoft,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                       const SizedBox(width: 16),
                       _buildBadge(Icons.favorite_rounded, 'COMPASSIONATE'),
                     ],

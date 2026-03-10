@@ -14,15 +14,14 @@ class ParentVerificationStatusScreen extends StatefulWidget {
 
 class _ParentVerificationStatusScreenState
     extends State<ParentVerificationStatusScreen> {
-  bool _isRefreshing = false;
-  Map<String, bool> _expandedSteps = {
+  final Map<String, bool> _expandedSteps = {
     'Document Verification': false,
     'Background Check': true, // Current step expanded by default
     'Home Study Visit': false,
   };
 
   // Document upload simulation
-  Map<String, bool> _documentsUploaded = {
+  final Map<String, bool> _documentsUploaded = {
     'Government ID': true,
     'Income Proof': true,
     'Medical Certificate': true,
@@ -30,9 +29,7 @@ class _ParentVerificationStatusScreenState
   };
 
   Future<void> _refreshStatus() async {
-    setState(() => _isRefreshing = true);
     await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isRefreshing = false);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -105,7 +102,7 @@ class _ParentVerificationStatusScreenState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: ParentThemeColors.pureWhite.withOpacity(0.95),
+        color: ParentThemeColors.pureWhite.withValues(alpha: 0.95),
         border: Border(
           bottom: BorderSide(color: ParentThemeColors.skyBlue, width: 1),
         ),
@@ -144,10 +141,10 @@ class _ParentVerificationStatusScreenState
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: ParentThemeColors.skyBlue.withOpacity(0.3),
+        color: ParentThemeColors.skyBlue.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: ParentThemeColors.primaryBlue.withOpacity(0.3),
+          color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -186,10 +183,10 @@ class _ParentVerificationStatusScreenState
       decoration: BoxDecoration(
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ParentThemeColors.skyBlue.withOpacity(0.5)),
+        border: Border.all(color: ParentThemeColors.skyBlue.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.08),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -353,13 +350,13 @@ class _ParentVerificationStatusScreenState
                 color: isCompleted
                     ? statusColor
                     : (isCurrent
-                          ? statusColor.withOpacity(0.2)
+                          ? statusColor.withValues(alpha: 0.2)
                           : ParentThemeColors.skyBlue),
                 shape: BoxShape.circle,
                 boxShadow: isCompleted || isCurrent
                     ? [
                         BoxShadow(
-                          color: statusColor.withOpacity(0.3),
+                          color: statusColor.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -381,7 +378,7 @@ class _ParentVerificationStatusScreenState
                   height: 64,
                   decoration: BoxDecoration(
                     color: isCurrent
-                        ? statusColor.withOpacity(0.3)
+                        ? statusColor.withValues(alpha: 0.3)
                         : ParentThemeColors.skyBlue,
                     borderRadius: BorderRadius.circular(2),
                   ),
@@ -402,12 +399,12 @@ class _ParentVerificationStatusScreenState
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isCurrent
-                        ? statusColor.withOpacity(0.3)
-                        : ParentThemeColors.borderColor.withOpacity(0.5),
+                        ? statusColor.withValues(alpha: 0.3)
+                        : ParentThemeColors.borderColor.withValues(alpha: 0.5),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: ParentThemeColors.primaryBlue.withOpacity(0.05),
+                      color: ParentThemeColors.primaryBlue.withValues(alpha: 0.05),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -438,7 +435,7 @@ class _ParentVerificationStatusScreenState
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.1),
+                                  color: statusColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Row(
@@ -595,7 +592,7 @@ class _ParentVerificationStatusScreenState
         color: ParentThemeColors.pureWhite,
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.textDark.withOpacity(0.1),
+            color: ParentThemeColors.textDark.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),

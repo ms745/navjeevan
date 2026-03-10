@@ -40,7 +40,7 @@ class UpdatedLegalGuidanceScreen extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: NavJeevanColors.primaryRose.withOpacity(0.2),
+                    color: NavJeevanColors.primaryRose.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Column(
@@ -233,7 +233,7 @@ class UpdatedLegalGuidanceScreen extends StatelessWidget {
                 ),
               ),
               if (!isLast)
-                Container(width: 2, height: 80, color: color.withOpacity(0.2)),
+                Container(width: 2, height: 80, color: color.withValues(alpha: 0.2)),
             ],
           ),
           const SizedBox(width: 16),
@@ -267,7 +267,7 @@ class UpdatedLegalGuidanceScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(color: NavJeevanColors.borderColor.withOpacity(0.5)),
+          top: BorderSide(color: NavJeevanColors.borderColor.withValues(alpha: 0.5)),
         ),
       ),
       child: BottomNavigationBar(

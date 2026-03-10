@@ -44,4 +44,28 @@ class NavJeevanTextStyles {
     fontWeight: FontWeight.w700,
     color: NavJeevanColors.pureWhite,
   );
+
+  static TextStyle get titleMedium => GoogleFonts.nunito(
+    fontSize: 18,
+    fontWeight: FontWeight.w700,
+    color: NavJeevanColors.textDark,
+  );
+
+  static TextStyle get titleSmall => GoogleFonts.nunito(
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    color: NavJeevanColors.textDark,
+  );
+
+  static TextStyle get headlineSmall => GoogleFonts.cormorantGaramond(
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    color: NavJeevanColors.textDark,
+  );
+
+  static TextStyle get headlineLarge => GoogleFonts.cormorantGaramond(
+    fontSize: 34,
+    fontWeight: FontWeight.w700,
+    color: NavJeevanColors.textDark,
+  );
 }

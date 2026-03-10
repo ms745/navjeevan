@@ -91,7 +91,7 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: ParentThemeColors.primaryBlue.withOpacity(0.3),
+                          color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -134,11 +134,11 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
         gradient: ParentThemeColors.cardGradient,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: ParentThemeColors.borderColor.withOpacity(0.5),
+          color: ParentThemeColors.borderColor.withValues(alpha: 0.5),
         ),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.1),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -154,7 +154,7 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: ParentThemeColors.primaryBlue.withOpacity(0.3),
+                  color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -203,11 +203,11 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: ParentThemeColors.borderColor.withOpacity(0.5),
+          color: ParentThemeColors.borderColor.withValues(alpha: 0.5),
         ),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.08),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -296,10 +296,10 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: ParentThemeColors.skyBlue.withOpacity(0.5),
+            color: ParentThemeColors.skyBlue.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: ParentThemeColors.primaryBlue.withOpacity(0.3),
+              color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
@@ -416,7 +416,7 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
         gradient: ParentThemeColors.lightTrustGradient,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: ParentThemeColors.borderColor.withOpacity(0.5),
+          color: ParentThemeColors.borderColor.withValues(alpha: 0.5),
         ),
       ),
       child: Row(

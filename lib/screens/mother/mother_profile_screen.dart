@@ -90,14 +90,14 @@ class _MotherProfileScreenState extends State<MotherProfileScreen> {
               title: const Text('App notifications'),
               value: _notifications,
               onChanged: (value) => setState(() => _notifications = value),
-              activeColor: NavJeevanColors.primaryRose,
+              activeThumbColor: NavJeevanColors.primaryRose,
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Anonymous mode by default'),
               value: _anonymousDefault,
               onChanged: (value) => setState(() => _anonymousDefault = value),
-              activeColor: NavJeevanColors.primaryRose,
+              activeThumbColor: NavJeevanColors.primaryRose,
             ),
             const SizedBox(height: 8),
             SizedBox(

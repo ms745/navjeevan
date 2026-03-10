@@ -188,7 +188,7 @@ class _CounselingScreenState extends State<CounselingScreen> {
                     ),
                   );
                 },
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemCount: _modes.length,
               ),
             ),
@@ -285,9 +285,9 @@ class _CounselingScreenState extends State<CounselingScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: NavJeevanColors.borderColor.withOpacity(0.5)),
+        border: Border.all(color: NavJeevanColors.borderColor.withValues(alpha: 0.5)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10),
         ],
       ),
       child: Row(
@@ -324,7 +324,7 @@ class _CounselingScreenState extends State<CounselingScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
+                        color: statusColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -395,7 +395,7 @@ class _CounselingScreenState extends State<CounselingScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: NavJeevanColors.blush.withOpacity(0.5),
+        color: NavJeevanColors.blush.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -538,7 +538,7 @@ class _CounselingScreenState extends State<CounselingScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border(left: BorderSide(color: color, width: 4)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10),
         ],
       ),
       child: Column(
@@ -562,7 +562,7 @@ class _CounselingScreenState extends State<CounselingScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -612,7 +612,7 @@ class _CounselingScreenState extends State<CounselingScreen> {
                   child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: color.withOpacity(0.1),
+                      backgroundColor: color.withValues(alpha: 0.1),
                       foregroundColor: color,
                       elevation: 0,
                       minimumSize: const Size(0, 40),
@@ -646,7 +646,7 @@ class _CounselingScreenState extends State<CounselingScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(color: NavJeevanColors.borderColor.withOpacity(0.5)),
+          top: BorderSide(color: NavJeevanColors.borderColor.withValues(alpha: 0.5)),
         ),
       ),
       child: BottomNavigationBar(

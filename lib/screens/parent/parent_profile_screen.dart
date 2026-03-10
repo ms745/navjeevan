@@ -65,10 +65,9 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
         await ParentNotificationPreferencesStore.loadProfilePreferences();
     if (!mounted) return;
 
-    final loadedPrefs =
-        (stored['prefs'] as Map<String, dynamic>).map(
-          (key, value) => MapEntry(key, value as bool),
-        );
+    final loadedPrefs = (stored['prefs'] as Map<String, dynamic>).map(
+      (key, value) => MapEntry(key, value as bool),
+    );
 
     setState(() {
       _notificationsEnabled = stored['enabled'] as bool;
@@ -147,7 +146,9 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
             ListTile(
               leading: const Icon(Icons.folder_open_outlined),
               title: const Text('Browse Documents / Any File'),
-              subtitle: const Text('Access all system files and media resources'),
+              subtitle: const Text(
+                'Access all system files and media resources',
+              ),
               onTap: () {
                 Navigator.pop(context);
                 _pickAndUploadDocument(
@@ -196,9 +197,9 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
       if (!mounted) return;
 
       if (selectedName == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No file selected.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('No file selected.')));
         return;
       }
 
@@ -251,8 +252,10 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
                       contentPadding: EdgeInsets.zero,
                       value: _notificationsEnabled,
                       title: const Text('Enable Notifications'),
-                      subtitle: const Text('Master control for profile notifications'),
-                      activeColor: ParentThemeColors.primaryBlue,
+                      subtitle: const Text(
+                        'Master control for profile notifications',
+                      ),
+                      activeThumbColor: ParentThemeColors.primaryBlue,
                       onChanged: (value) {
                         setState(() => _notificationsEnabled = value);
                         _saveProfileNotificationPreferences();
@@ -268,13 +271,13 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
                       ['supportCalls', 'Support Calls'],
                       ['sessions', 'Counseling Sessions'],
                     ].map((entry) {
-                      final key = entry[0]!;
-                      final label = entry[1]!;
+                      final key = entry[0];
+                      final label = entry[1];
                       return SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         value: _notificationPhasePrefs[key] ?? false,
                         title: Text(label),
-                        activeColor: ParentThemeColors.primaryBlue,
+                        activeThumbColor: ParentThemeColors.primaryBlue,
                         onChanged: _notificationsEnabled
                             ? (value) {
                                 setState(() {
@@ -295,7 +298,9 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(this.context).showSnackBar(
                             const SnackBar(
-                              content: Text('Notification preferences updated.'),
+                              content: Text(
+                                'Notification preferences updated.',
+                              ),
                               backgroundColor: ParentThemeColors.successGreen,
                             ),
                           );
@@ -367,7 +372,7 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
         gradient: ParentThemeColors.trustGradient,
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.3),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -410,11 +415,11 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: ParentThemeColors.borderColor.withOpacity(0.5),
+          color: ParentThemeColors.borderColor.withValues(alpha: 0.5),
         ),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.1),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.1),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -430,7 +435,7 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: ParentThemeColors.primaryBlue.withOpacity(0.3),
+                  color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
                   blurRadius: 16,
                   offset: const Offset(0, 4),
                 ),
@@ -529,11 +534,11 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
         border: Border.all(
           color: _isEditMode
               ? ParentThemeColors.primaryBlue
-              : ParentThemeColors.borderColor.withOpacity(0.5),
+              : ParentThemeColors.borderColor.withValues(alpha: 0.5),
         ),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.05),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -613,7 +618,7 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: ParentThemeColors.skyBlue.withOpacity(0.3),
+            color: ParentThemeColors.skyBlue.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: ParentThemeColors.primaryBlue, size: 20),
@@ -677,7 +682,7 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: ParentThemeColors.skyBlue.withOpacity(0.3),
+            color: ParentThemeColors.skyBlue.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: ParentThemeColors.primaryBlue, size: 20),
@@ -725,10 +730,10 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
       decoration: BoxDecoration(
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withOpacity(0.3)),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: statusColor.withOpacity(0.08),
+            color: statusColor.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -739,7 +744,7 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
+              color: statusColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(Icons.description, color: statusColor, size: 24),
@@ -785,7 +790,7 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -840,11 +845,11 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: ParentThemeColors.borderColor.withOpacity(0.5),
+          color: ParentThemeColors.borderColor.withValues(alpha: 0.5),
         ),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.05),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -932,7 +937,7 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: ParentThemeColors.skyBlue.withOpacity(0.3),
+                  color: ParentThemeColors.skyBlue.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -983,10 +988,10 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
       decoration: BoxDecoration(
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ParentThemeColors.errorRed.withOpacity(0.3)),
+        border: Border.all(color: ParentThemeColors.errorRed.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.errorRed.withOpacity(0.1),
+            color: ParentThemeColors.errorRed.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1069,7 +1074,7 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
         color: ParentThemeColors.pureWhite,
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.textDark.withOpacity(0.1),
+            color: ParentThemeColors.textDark.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -1125,7 +1130,7 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isActive
-              ? ParentThemeColors.primaryBlue.withOpacity(0.1)
+              ? ParentThemeColors.primaryBlue.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),

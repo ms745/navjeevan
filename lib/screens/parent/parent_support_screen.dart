@@ -136,10 +136,9 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
         await ParentNotificationPreferencesStore.loadSupportPreferences();
     if (!mounted) return;
 
-    final loadedPrefs =
-        (stored['prefs'] as Map<String, dynamic>).map(
-          (key, value) => MapEntry(key, value as bool),
-        );
+    final loadedPrefs = (stored['prefs'] as Map<String, dynamic>).map(
+      (key, value) => MapEntry(key, value as bool),
+    );
 
     setState(() {
       _supportNotificationsEnabled = stored['enabled'] as bool;
@@ -222,7 +221,9 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(notifications[category] ?? 'You have a new notification.'),
+        content: Text(
+          notifications[category] ?? 'You have a new notification.',
+        ),
         backgroundColor: ParentThemeColors.infoBlue,
       ),
     );
@@ -261,7 +262,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
                       value: _supportNotificationsEnabled,
                       title: const Text('Enable Support Notifications'),
                       subtitle: const Text('Master switch for support alerts'),
-                      activeColor: ParentThemeColors.primaryBlue,
+                      activeThumbColor: ParentThemeColors.primaryBlue,
                       onChanged: (value) {
                         setState(() => _supportNotificationsEnabled = value);
                         _saveSupportNotificationPreferences();
@@ -281,11 +282,11 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
                         contentPadding: EdgeInsets.zero,
                         value: _supportNotificationPrefs[key] ?? false,
                         title: Text(label),
-                        activeColor: ParentThemeColors.primaryBlue,
+                        activeThumbColor: ParentThemeColors.primaryBlue,
                         onChanged: _supportNotificationsEnabled
                             ? (value) {
                                 setState(() {
-                                  _supportNotificationPrefs[key!] = value;
+                                  _supportNotificationPrefs[key] = value;
                                 });
                                 _saveSupportNotificationPreferences();
                                 setModalState(() {});
@@ -328,38 +329,6 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
     );
   }
 
-  void _scheduleCall() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Schedule a Call'),
-        content: const Text(
-          'Choose your preferred date and time for a counseling session.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Call scheduled successfully!'),
-                  backgroundColor: ParentThemeColors.successGreen,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ParentThemeColors.primaryBlue,
-            ),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _requestOrProgressCall(String callType) {
     final callData = _callRequests[callType];
@@ -369,7 +338,6 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
     final int nextStage = currentStage < (_callStages.length - 1)
         ? currentStage + 1
         : currentStage;
-    final process = (callData['process'] as List<dynamic>).cast<String>();
     final executions = (callData['executions'] as List<dynamic>).cast<String>();
 
     String newExecution;
@@ -439,10 +407,10 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
                         final callType = entry.key;
                         final data = entry.value;
                         final stage = data['stage'] as int;
-                        final process =
-                            (data['process'] as List<dynamic>).cast<String>();
-                        final executions =
-                            (data['executions'] as List<dynamic>).cast<String>();
+                        final process = (data['process'] as List<dynamic>)
+                            .cast<String>();
+                        final executions = (data['executions'] as List<dynamic>)
+                            .cast<String>();
                         final isHighlighted = callType == highlightType;
 
                         return Container(
@@ -480,7 +448,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
                                     ),
                                     decoration: BoxDecoration(
                                       color: ParentThemeColors.primaryBlue
-                                          .withOpacity(0.1),
+                                          .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -857,7 +825,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: ParentThemeColors.skyBlue.withOpacity(0.3),
+          color: ParentThemeColors.skyBlue.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(12),
         ),
         child: TabBar(
@@ -868,7 +836,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: ParentThemeColors.primaryBlue.withOpacity(0.3),
+                color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -982,7 +950,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: ParentThemeColors.errorRed.withOpacity(0.3),
+                color: ParentThemeColors.errorRed.withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -993,7 +961,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: ParentThemeColors.pureWhite.withOpacity(0.2),
+                  color: ParentThemeColors.pureWhite.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -1052,10 +1020,10 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
       decoration: BoxDecoration(
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withOpacity(0.3)),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.05),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1069,7 +1037,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: statusColor, size: 24),
@@ -1104,7 +1072,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -1130,21 +1098,24 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
           icon: Icons.psychology,
           label: 'Counseling Session',
           color: ParentThemeColors.primaryBlue,
-          onTap: () => _showCallRequestOverview(highlightType: 'Counseling Session'),
+          onTap: () =>
+              _showCallRequestOverview(highlightType: 'Counseling Session'),
         ),
         const SizedBox(height: 8),
         _buildActionButton(
           icon: Icons.account_balance,
           label: 'Legal Consultation',
           color: ParentThemeColors.successGreen,
-          onTap: () => _showCallRequestOverview(highlightType: 'Legal Consultation'),
+          onTap: () =>
+              _showCallRequestOverview(highlightType: 'Legal Consultation'),
         ),
         const SizedBox(height: 8),
         _buildActionButton(
           icon: Icons.medical_services,
           label: 'Medical Guidance',
           color: ParentThemeColors.pinkDark,
-          onTap: () => _showCallRequestOverview(highlightType: 'Medical Guidance'),
+          onTap: () =>
+              _showCallRequestOverview(highlightType: 'Medical Guidance'),
         ),
       ],
     );
@@ -1186,11 +1157,11 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: ParentThemeColors.borderColor.withOpacity(0.5),
+          color: ParentThemeColors.borderColor.withValues(alpha: 0.5),
         ),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.05),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1262,7 +1233,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: ParentThemeColors.skyBlue.withOpacity(0.3),
+              color: ParentThemeColors.skyBlue.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -1359,7 +1330,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
                         _selectedFaqCategory = index;
                       });
                     },
-                    backgroundColor: ParentThemeColors.skyBlue.withOpacity(0.3),
+                    backgroundColor: ParentThemeColors.skyBlue.withValues(alpha: 0.3),
                     selectedColor: ParentThemeColors.primaryBlue,
                     labelStyle: TextStyle(
                       color: isSelected
@@ -1393,11 +1364,11 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: ParentThemeColors.borderColor.withOpacity(0.5),
+          color: ParentThemeColors.borderColor.withValues(alpha: 0.5),
         ),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.05),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1411,7 +1382,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: ParentThemeColors.primaryBlue.withOpacity(0.1),
+              color: ParentThemeColors.primaryBlue.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
@@ -1491,7 +1462,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
           ),
           boxShadow: [
             BoxShadow(
-              color: ParentThemeColors.primaryBlue.withOpacity(0.1),
+              color: ParentThemeColors.primaryBlue.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -1556,7 +1527,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
         color: ParentThemeColors.pureWhite,
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.textDark.withOpacity(0.1),
+            color: ParentThemeColors.textDark.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -1614,7 +1585,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: ParentThemeColors.primaryBlue.withOpacity(0.3),
+                      color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -1670,10 +1641,10 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
           decoration: BoxDecoration(
             color: ParentThemeColors.pureWhite,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -1684,7 +1655,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 24),
@@ -1716,10 +1687,10 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: ParentThemeColors.skyBlue.withOpacity(0.3),
+        color: ParentThemeColors.skyBlue.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: ParentThemeColors.primaryBlue.withOpacity(0.3),
+          color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -1756,7 +1727,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
         color: ParentThemeColors.pureWhite,
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.textDark.withOpacity(0.1),
+            color: ParentThemeColors.textDark.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -1812,7 +1783,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isActive
-              ? ParentThemeColors.primaryBlue.withOpacity(0.1)
+              ? ParentThemeColors.primaryBlue.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),

@@ -348,7 +348,7 @@ class _HelpRequestScreenState extends State<HelpRequestScreen> {
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: NavJeevanColors.blush.withOpacity(0.3),
+                                color: NavJeevanColors.blush.withValues(alpha: 0.3),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Column(
@@ -446,7 +446,7 @@ class _HelpRequestScreenState extends State<HelpRequestScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.3),
+            color: Colors.red.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -473,7 +473,7 @@ class _HelpRequestScreenState extends State<HelpRequestScreen> {
                     Text(
                       'EMERGENCY SOS',
                       style: NavJeevanTextStyles.bodySmall.copyWith(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.1,
                       ),
@@ -499,7 +499,7 @@ class _HelpRequestScreenState extends State<HelpRequestScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(color: NavJeevanColors.borderColor.withOpacity(0.5)),
+          top: BorderSide(color: NavJeevanColors.borderColor.withValues(alpha: 0.5)),
         ),
       ),
       child: BottomNavigationBar(

@@ -10,8 +10,7 @@ class NavJeevanTheme {
       brightness: Brightness.light,
       primary: NavJeevanColors.primaryRose,
       secondary: NavJeevanColors.roseLight,
-      surface: NavJeevanColors.pureWhite,
-      background: NavJeevanColors.petalLight,
+      surface: NavJeevanColors.petalLight, // was background
     ),
     scaffoldBackgroundColor: NavJeevanColors.petalLight,
     appBarTheme: AppBarTheme(
@@ -26,7 +25,7 @@ class NavJeevanTheme {
         backgroundColor: NavJeevanColors.primaryRose,
         foregroundColor: NavJeevanColors.pureWhite,
         elevation: 4,
-        shadowColor: NavJeevanColors.primaryRose.withOpacity(0.4),
+        shadowColor: NavJeevanColors.primaryRose.withValues(alpha: 0.4),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -56,7 +55,7 @@ class NavJeevanTheme {
     cardTheme: CardThemeData(
       color: NavJeevanColors.pureWhite,
       elevation: 2,
-      shadowColor: NavJeevanColors.primaryRose.withOpacity(0.1),
+      shadowColor: NavJeevanColors.primaryRose.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),

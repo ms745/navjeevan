@@ -99,7 +99,7 @@ class _ParentRegistrationWizardScreenState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: ParentThemeColors.pureWhite.withOpacity(0.95),
+        color: ParentThemeColors.pureWhite.withValues(alpha: 0.95),
         border: Border(
           bottom: BorderSide(color: ParentThemeColors.skyBlue, width: 1),
         ),
@@ -108,7 +108,7 @@ class _ParentRegistrationWizardScreenState
         children: [
           Container(
             decoration: BoxDecoration(
-              color: ParentThemeColors.accentPink.withOpacity(0.3),
+              color: ParentThemeColors.accentPink.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: IconButton(
@@ -172,10 +172,10 @@ class _ParentRegistrationWizardScreenState
       decoration: BoxDecoration(
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ParentThemeColors.skyBlue.withOpacity(0.5)),
+        border: Border.all(color: ParentThemeColors.skyBlue.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.08),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -218,7 +218,7 @@ class _ParentRegistrationWizardScreenState
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: ParentThemeColors.pinkDark.withOpacity(0.3),
+                      color: ParentThemeColors.pinkDark.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -421,10 +421,10 @@ class _ParentRegistrationWizardScreenState
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: ParentThemeColors.skyBlue.withOpacity(0.3),
+            color: ParentThemeColors.skyBlue.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: ParentThemeColors.primaryBlue.withOpacity(0.3),
+              color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
@@ -455,10 +455,10 @@ class _ParentRegistrationWizardScreenState
       decoration: BoxDecoration(
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ParentThemeColors.skyBlue.withOpacity(0.5)),
+        border: Border.all(color: ParentThemeColors.skyBlue.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.08),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -516,12 +516,12 @@ class _ParentRegistrationWizardScreenState
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isUploaded
-              ? ParentThemeColors.successGreen.withOpacity(0.3)
+              ? ParentThemeColors.successGreen.withValues(alpha: 0.3)
               : ParentThemeColors.borderColor,
         ),
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.primaryBlue.withOpacity(0.05),
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -535,8 +535,8 @@ class _ParentRegistrationWizardScreenState
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isUploaded
-                      ? ParentThemeColors.successGreen.withOpacity(0.1)
-                      : ParentThemeColors.skyBlue.withOpacity(0.3),
+                      ? ParentThemeColors.successGreen.withValues(alpha: 0.1)
+                      : ParentThemeColors.skyBlue.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -587,7 +587,7 @@ class _ParentRegistrationWizardScreenState
               decoration: BoxDecoration(
                 border: Border(
                   top: BorderSide(
-                    color: ParentThemeColors.borderColor.withOpacity(0.3),
+                    color: ParentThemeColors.borderColor.withValues(alpha: 0.3),
                   ),
                 ),
               ),
@@ -654,7 +654,7 @@ class _ParentRegistrationWizardScreenState
         color: ParentThemeColors.pureWhite,
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.textDark.withOpacity(0.1),
+            color: ParentThemeColors.textDark.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
