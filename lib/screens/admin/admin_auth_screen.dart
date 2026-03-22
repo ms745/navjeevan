@@ -7,6 +7,8 @@ import '../../core/constants/route_names.dart';
 import '../../core/widgets/error_popup.dart';
 import '../../providers/auth_provider.dart';
 
+enum _AdminAuthAction { none, login, google }
+
 class AdminAuthScreen extends StatefulWidget {
   const AdminAuthScreen({super.key});
 
@@ -15,10 +17,10 @@ class AdminAuthScreen extends StatefulWidget {
 }
 
 class _AdminAuthScreenState extends State<AdminAuthScreen> {
-  final _idController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _idController = TextEditingController(text: 'admin@navjeevan.app');
+  final _passwordController = TextEditingController(text: 'Admin@123');
   bool _obscurePassword = true;
-  bool _isAuthActionInProgress = false;
+  _AdminAuthAction _activeAuthAction = _AdminAuthAction.none;
 
   @override
   void dispose() {
@@ -27,16 +29,22 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
     super.dispose();
   }
 
-  Future<void> _runAuthAction(Future<void> Function() action) async {
+  bool get _isAuthActionInProgress =>
+      _activeAuthAction != _AdminAuthAction.none;
+
+  Future<void> _runAuthAction(
+    Future<void> Function() action,
+    _AdminAuthAction authAction,
+  ) async {
     if (_isAuthActionInProgress) {
       return;
     }
-    setState(() => _isAuthActionInProgress = true);
+    setState(() => _activeAuthAction = authAction);
     try {
       await action();
     } finally {
       if (mounted) {
-        setState(() => _isAuthActionInProgress = false);
+        setState(() => _activeAuthAction = _AdminAuthAction.none);
       }
     }
   }
@@ -86,8 +94,10 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading =
+    final isActionRunning =
         context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
+    final isLoginLoading = _activeAuthAction == _AdminAuthAction.login;
+    final isGoogleLoading = _activeAuthAction == _AdminAuthAction.google;
     final shortestSide = MediaQuery.sizeOf(context).shortestSide;
     final logoSize = (shortestSide * 0.15).clamp(56.0, 80.0).toDouble();
     final logoBadgePadding = (logoSize * 0.3).clamp(14.0, 24.0).toDouble();
@@ -162,9 +172,15 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
             ),
             const SizedBox(height: 40),
             ElevatedButton(
-              onPressed: isLoading
+              onPressed: isLoginLoading
                   ? null
-                  : () => _runAuthAction(_authenticateAdmin),
+                  : () {
+                      if (isActionRunning) return;
+                      _runAuthAction(
+                        _authenticateAdmin,
+                        _AdminAuthAction.login,
+                      );
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: NavJeevanColors.primaryRose,
                 foregroundColor: Colors.white,
@@ -175,7 +191,7 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
                 elevation: 4,
                 shadowColor: NavJeevanColors.primaryRose.withValues(alpha: 0.4),
               ),
-              child: isLoading
+              child: isLoginLoading
                   ? const SizedBox(
                       height: 18,
                       width: 18,
@@ -195,9 +211,15 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: isLoading
+              onPressed: isGoogleLoading
                   ? null
-                  : () => _runAuthAction(_authenticateAdminWithGoogle),
+                  : () {
+                      if (isActionRunning) return;
+                      _runAuthAction(
+                        _authenticateAdminWithGoogle,
+                        _AdminAuthAction.google,
+                      );
+                    },
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 side: BorderSide(
@@ -207,7 +229,7 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              icon: isLoading
+              icon: isGoogleLoading
                   ? const SizedBox(
                       height: 18,
                       width: 18,
@@ -215,7 +237,7 @@ class _AdminAuthScreenState extends State<AdminAuthScreen> {
                     )
                   : const Icon(Icons.g_mobiledata_rounded, size: 24),
               label: Text(
-                isLoading ? 'Please wait...' : 'Continue with Google',
+                isGoogleLoading ? 'Please wait...' : 'Continue with Google',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),

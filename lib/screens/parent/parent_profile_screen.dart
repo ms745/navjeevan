@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/constants/route_names.dart';
+import '../../core/services/firebase_service.dart';
 import '../../core/theme/parent_colors.dart';
 import '../../core/constants/dummy_parent_data.dart';
 import '../../core/services/parent_notification_preferences_store.dart';
@@ -337,6 +339,17 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
                   children: [
                     _buildProfileCard(currentParent),
                     const SizedBox(height: 16),
+                    StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                      stream: FirebaseService.instance.watchCurrentParentApplication(),
+                      builder: (context, snapshot) {
+                        final data = snapshot.data?.data() ?? <String, dynamic>{};
+                        if (data.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        return _buildLiveRequestStatusCard(data);
+                      },
+                    ),
+                    const SizedBox(height: 16),
                     _buildSectionTitle('Personal Details'),
                     const SizedBox(height: 12),
                     _buildPersonalDetailsCard(currentParent),
@@ -519,6 +532,93 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLiveRequestStatusCard(Map<String, dynamic> data) {
+    final status = (data['adoptionStatus'] ?? 'Under Review').toString();
+    final stage = (data['verificationStage'] ?? 'Pending').toString();
+    final adminNotes = (data['adminDecisionNotes'] ?? '').toString();
+    final assignedChild = Map<String, dynamic>.from(
+      data['assignedChild'] as Map<String, dynamic>? ?? <String, dynamic>{},
+    );
+    final childName = (assignedChild['name'] ?? 'Assigned Child').toString();
+    final childAge = (assignedChild['age'] ?? '').toString();
+    final childGender = (assignedChild['gender'] ?? '').toString();
+    final childEducation = (assignedChild['education'] ?? '').toString();
+
+    final statusColor = () {
+      switch (status.toLowerCase()) {
+        case 'verified':
+        case 'child assigned':
+          return ParentThemeColors.successGreen;
+        case 'rejected':
+        case 'declined':
+          return ParentThemeColors.errorRed;
+        case 'changes requested':
+          return ParentThemeColors.warningOrange;
+        default:
+          return ParentThemeColors.primaryBlue;
+      }
+    }();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ParentThemeColors.pureWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: statusColor.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.assignment_turned_in_outlined),
+              const SizedBox(width: 8),
+              const Text(
+                'Adoption Request Status',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: ParentThemeColors.textDark,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('Stage: $stage'),
+          if (adminNotes.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text('Reason / Notes: $adminNotes'),
+          ],
+          if (assignedChild.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Divider(),
+            const SizedBox(height: 6),
+            Text(
+              'Assigned Child: $childName',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Age: ${childAge.isEmpty ? '-' : childAge} • Gender: ${childGender.isEmpty ? '-' : childGender}',
+            ),
+            if (childEducation.isNotEmpty) Text('Education: $childEducation'),
+          ],
+        ],
+      ),
     );
   }
 

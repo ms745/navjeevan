@@ -1,8 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../core/constants/route_names.dart';
+import '../../core/services/firebase_service.dart';
 import '../../core/theme/parent_colors.dart';
-import '../../core/constants/dummy_parent_data.dart';
+import '../../core/widgets/error_popup.dart';
 
 class ParentVerificationStatusScreen extends StatefulWidget {
   const ParentVerificationStatusScreen({super.key});
@@ -14,81 +19,123 @@ class ParentVerificationStatusScreen extends StatefulWidget {
 
 class _ParentVerificationStatusScreenState
     extends State<ParentVerificationStatusScreen> {
-  final Map<String, bool> _expandedSteps = {
-    'Document Verification': false,
-    'Background Check': true, // Current step expanded by default
-    'Home Study Visit': false,
-  };
-
-  // Document upload simulation
-  final Map<String, bool> _documentsUploaded = {
-    'Government ID': true,
-    'Income Proof': true,
-    'Medical Certificate': true,
-    'Police Verification': false,
-  };
-
   Future<void> _refreshStatus() async {
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+  }
+
+  Future<void> _reuploadDocument(String docType) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+      );
+
+      if (result == null || result.files.single.path == null) {
+        return;
+      }
+
+      await FirebaseService.instance.reuploadParentDocument(
+        docType: docType,
+        filePath: result.files.single.path!,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Status updated successfully!'),
+        SnackBar(
+          content: Text('$docType uploaded again for verification.'),
           backgroundColor: ParentThemeColors.successGreen,
-          duration: Duration(seconds: 2),
         ),
       );
+    } catch (error) {
+      if (mounted) {
+        showErrorBottomPopup(context, 'Unable to upload document: $error');
+      }
     }
   }
 
-  void _toggleStep(String title) {
-    setState(() {
-      _expandedSteps[title] = !(_expandedSteps[title] ?? false);
-    });
-  }
+  Future<void> _openDocument(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      if (mounted) {
+        showErrorBottomPopup(context, 'Invalid document link.');
+      }
+      return;
+    }
 
-  void _uploadDocument(String docType) {
-    setState(() {
-      _documentsUploaded[docType] = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$docType uploaded successfully'),
-        backgroundColor: ParentThemeColors.successGreen,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+        mounted) {
+      showErrorBottomPopup(context, 'Unable to open the document.');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentParent = DummyParentData.getCurrentParent();
-    final documents = DummyParentData.sampleDocuments;
-
     return Scaffold(
       backgroundColor: ParentThemeColors.backgroundLight,
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(context, currentParent),
+            _buildHeader(context),
             Expanded(
-              child: RefreshIndicator(
-                onRefresh: _refreshStatus,
-                color: ParentThemeColors.primaryBlue,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildTrustBanner(),
-                      const SizedBox(height: 16),
-                      _buildProgressOverview(),
-                      const SizedBox(height: 16),
-                      _buildVerificationTimeline(documents),
-                      const SizedBox(height: 100),
-                    ],
-                  ),
-                ),
+              child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                stream: FirebaseService.instance
+                    .watchCurrentParentApplication(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final documentSnapshot = snapshot.data;
+                  final data = documentSnapshot?.data();
+                  if (documentSnapshot == null ||
+                      !documentSnapshot.exists ||
+                      data == null ||
+                      data.isEmpty) {
+                    return _buildEmptyState();
+                  }
+
+                  final summary = Map<String, dynamic>.from(
+                    data['verificationSummary'] as Map<String, dynamic>? ??
+                        <String, dynamic>{},
+                  );
+                  final documents = Map<String, dynamic>.from(
+                    data['documents'] as Map<String, dynamic>? ??
+                        <String, dynamic>{},
+                  );
+
+                  return RefreshIndicator(
+                    onRefresh: _refreshStatus,
+                    color: ParentThemeColors.primaryBlue,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          _buildTrustBanner(),
+                          const SizedBox(height: 16),
+                          _buildProgressOverview(data, summary),
+                          const SizedBox(height: 16),
+                          _buildDocumentStatusList(documents),
+                          const SizedBox(height: 16),
+                          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                            stream: FirebaseService.instance
+                                .watchParentApplicationEvents(
+                                  documentSnapshot.id,
+                                ),
+                            builder: (context, eventSnapshot) {
+                              final events = eventSnapshot.data?.docs ?? [];
+                              return _buildActivityTimeline(events);
+                            },
+                          ),
+                          const SizedBox(height: 100),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -98,7 +145,7 @@ class _ParentVerificationStatusScreenState
     );
   }
 
-  Widget _buildHeader(BuildContext context, dynamic parent) {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -137,6 +184,59 @@ class _ParentVerificationStatusScreenState
     );
   }
 
+  Widget _buildEmptyState() {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: ParentThemeColors.pureWhite,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.assignment_outlined,
+                size: 72,
+                color: ParentThemeColors.primaryBlue,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'No parent application found',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: ParentThemeColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Complete the adoption registration first. After submitting documents, every verification stage will appear here.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: ParentThemeColors.textMid,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () =>
+                    context.go(NavJeevanRoutes.parentRegistrationWizard),
+                icon: const Icon(Icons.app_registration),
+                label: const Text('Start Registration'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ParentThemeColors.primaryBlue,
+                  foregroundColor: ParentThemeColors.pureWhite,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTrustBanner() {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -164,7 +264,7 @@ class _ParentVerificationStatusScreenState
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Your data is encrypted and secure. We follow strict privacy protocols.',
+              'Your submitted files are stored securely. Admin verification updates appear here in real time.',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -177,13 +277,26 @@ class _ParentVerificationStatusScreenState
     );
   }
 
-  Widget _buildProgressOverview() {
+  Widget _buildProgressOverview(
+    Map<String, dynamic> data,
+    Map<String, dynamic> summary,
+  ) {
+    final totalDocuments = (summary['totalDocuments'] ?? 0) as int;
+    final verifiedCount = (summary['verifiedCount'] ?? 0) as int;
+    final rejectedCount = (summary['rejectedCount'] ?? 0) as int;
+    final pendingCount = (summary['pendingCount'] ?? 0) as int;
+    final percentComplete = (summary['percentComplete'] ?? 0) as int;
+    final stage = (data['verificationStage'] ?? 'Awaiting Uploads').toString();
+    final status = (data['adoptionStatus'] ?? 'Draft').toString();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: ParentThemeColors.pureWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ParentThemeColors.skyBlue.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: ParentThemeColors.skyBlue.withValues(alpha: 0.5),
+        ),
         boxShadow: [
           BoxShadow(
             color: ParentThemeColors.primaryBlue.withValues(alpha: 0.08),
@@ -193,91 +306,98 @@ class _ParentVerificationStatusScreenState
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'OVERALL PROGRESS',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: ParentThemeColors.textMid,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Step 1 of 3',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: ParentThemeColors.textDark,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: ParentThemeColors.skyBlue,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  '33% Done',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: ParentThemeColors.primaryBlue,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            data['familyName']?.toString() ?? 'Parent application',
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: ParentThemeColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            stage,
+            style: TextStyle(
+              color: _statusColor(status),
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: 0.33,
-              backgroundColor: ParentThemeColors.skyBlue,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                ParentThemeColors.primaryBlue,
-              ),
+              value: percentComplete / 100,
               minHeight: 12,
+              backgroundColor: ParentThemeColors.skyBlue,
+              valueColor: AlwaysStoppedAnimation<Color>(_statusColor(status)),
             ),
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient: ParentThemeColors.lightTrustGradient,
-              borderRadius: BorderRadius.circular(8),
+          const SizedBox(height: 12),
+          Text(
+            '$verifiedCount of $totalDocuments documents verified',
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: ParentThemeColors.textDark,
             ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.format_quote,
-                  color: ParentThemeColors.primaryBlue,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '"The journey of a thousand miles begins with a single step."',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontStyle: FontStyle.italic,
-                      color: ParentThemeColors.textMid,
-                    ),
-                  ),
-                ),
-              ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _buildSummaryPill(
+                'Verified',
+                '$verifiedCount',
+                ParentThemeColors.successGreen,
+              ),
+              _buildSummaryPill(
+                'Pending',
+                '$pendingCount',
+                ParentThemeColors.warningOrange,
+              ),
+              _buildSummaryPill(
+                'Rejected',
+                '$rejectedCount',
+                ParentThemeColors.primaryBlue,
+              ),
+              _buildSummaryPill(
+                'Progress',
+                '$percentComplete%',
+                _statusColor(status),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryPill(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
         ],
@@ -285,301 +405,231 @@ class _ParentVerificationStatusScreenState
     );
   }
 
-  Widget _buildVerificationTimeline(List<dynamic> documents) {
-    return Column(
-      children: [
-        _buildTimelineStep(
-          title: 'Document Verification',
-          description:
-              'All essential files have been reviewed and approved by our legal team.',
-          status: 'Verified',
-          statusColor: ParentThemeColors.successGreen,
-          date: 'OCT 12',
-          isCompleted: true,
-          icon: Icons.check_circle,
-          documents: ['Government ID', 'Income Proof', 'Medical Certificate'],
-        ),
-        _buildTimelineStep(
-          title: 'Background Check',
-          description:
-              'Police verification and background screening in progress. Typically takes 7-10 business days.',
-          status: 'In Progress',
-          statusColor: ParentThemeColors.warningOrange,
-          date: 'Ongoing',
-          isCompleted: false,
-          isCurrent: true,
-          icon: Icons.hourglass_empty,
-          documents: ['Police Verification'],
-        ),
-        _buildTimelineStep(
-          title: 'Home Study Visit',
-          description:
-              'A social worker will visit your home to assess the living environment and family readiness.',
-          status: 'Scheduled',
-          statusColor: ParentThemeColors.infoBlue,
-          date: 'MAR 20',
-          isCompleted: false,
-          icon: Icons.schedule,
-        ),
-      ],
+  Widget _buildDocumentStatusList(Map<String, dynamic> documents) {
+    if (documents.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ParentThemeColors.pureWhite,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Document verification stages',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: ParentThemeColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...documents.entries.map((entry) {
+            final document = Map<String, dynamic>.from(
+              entry.value as Map<String, dynamic>? ?? <String, dynamic>{},
+            );
+            final docType = (document['type'] ?? entry.key).toString();
+            final status = (document['verificationStatus'] ?? 'Pending')
+                .toString();
+            final fileName = (document['fileName'] ?? 'Unnamed file')
+                .toString();
+            final notes = (document['verificationNotes'] ?? '').toString();
+            final url = (document['downloadUrl'] ?? '').toString();
+            final canReupload = status != 'Verified';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: _statusColor(status).withValues(alpha: 0.25),
+                ),
+                color: _statusColor(status).withValues(alpha: 0.06),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              docType,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: ParentThemeColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              fileName,
+                              style: TextStyle(
+                                color: ParentThemeColors.textMid,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _statusColor(status).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          status,
+                          style: TextStyle(
+                            color: _statusColor(status),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (notes.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Admin note: $notes',
+                      style: TextStyle(
+                        color: ParentThemeColors.textMid,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (url.isNotEmpty)
+                        OutlinedButton.icon(
+                          onPressed: () => _openDocument(url),
+                          icon: const Icon(Icons.open_in_new),
+                          label: const Text('Open file'),
+                        ),
+                      if (canReupload)
+                        ElevatedButton.icon(
+                          onPressed: () => _reuploadDocument(docType),
+                          icon: const Icon(Icons.upload_file),
+                          label: Text(
+                            status == 'Rejected'
+                                ? 'Upload updated file'
+                                : 'Re-upload',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ParentThemeColors.primaryBlue,
+                            foregroundColor: ParentThemeColors.pureWhite,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 
-  Widget _buildTimelineStep({
-    required String title,
-    required String description,
-    required String status,
-    required Color statusColor,
-    required String date,
-    required bool isCompleted,
-    bool isCurrent = false,
-    required IconData icon,
-    List<String>? documents,
-  }) {
-    final isExpanded = _expandedSteps[title] ?? false;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: isCompleted
-                    ? statusColor
-                    : (isCurrent
-                          ? statusColor.withValues(alpha: 0.2)
-                          : ParentThemeColors.skyBlue),
-                shape: BoxShape.circle,
-                boxShadow: isCompleted || isCurrent
-                    ? [
-                        BoxShadow(
-                          color: statusColor.withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : [],
-              ),
-              child: Icon(
-                icon,
-                color: isCompleted
-                    ? ParentThemeColors.pureWhite
-                    : (isCurrent ? statusColor : ParentThemeColors.textSoft),
-              ),
+  Widget _buildActivityTimeline(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> events,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ParentThemeColors.pureWhite,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Recent activity',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: ParentThemeColors.textDark,
             ),
-            if (!isCompleted || isCurrent)
-              Transform.translate(
-                offset: const Offset(0, -4),
-                child: Container(
-                  width: 4,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: isCurrent
-                        ? statusColor.withValues(alpha: 0.3)
-                        : ParentThemeColors.skyBlue,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: GestureDetector(
-              onTap: documents != null ? () => _toggleStep(title) : null,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: ParentThemeColors.pureWhite,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isCurrent
-                        ? statusColor.withValues(alpha: 0.3)
-                        : ParentThemeColors.borderColor.withValues(alpha: 0.5),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: ParentThemeColors.primaryBlue.withValues(alpha: 0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
+          ),
+          const SizedBox(height: 12),
+          if (events.isEmpty)
+            Text(
+              'Verification events will appear here.',
+              style: TextStyle(color: ParentThemeColors.textMid),
+            )
+          else
+            ...events.take(6).map((eventDoc) {
+              final event = eventDoc.data();
+              final title = (event['title'] ?? 'Status updated').toString();
+              final description =
+                  (event['description'] ?? 'No details provided').toString();
+              final status = (event['status'] ?? '').toString();
+              final createdAt = event['createdAt'] as Timestamp?;
+              final timeLabel = createdAt == null
+                  ? 'just now'
+                  : '${createdAt.toDate().day}/${createdAt.toDate().month}/${createdAt.toDate().year}';
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
+                    Container(
+                      margin: const EdgeInsets.only(top: 3),
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: _statusColor(status),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
                             title,
                             style: const TextStyle(
-                              fontSize: 17,
                               fontWeight: FontWeight.bold,
                               color: ParentThemeColors.textDark,
                             ),
                           ),
-                        ),
-                        Row(
-                          children: [
-                            if (isCurrent)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: statusColor,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Active',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: statusColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            if (documents != null)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: Icon(
-                                  isExpanded
-                                      ? Icons.expand_less
-                                      : Icons.expand_more,
-                                  color: ParentThemeColors.textMid,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: ParentThemeColors.textMid,
-                        height: 1.4,
+                          const SizedBox(height: 2),
+                          Text(
+                            description,
+                            style: TextStyle(color: ParentThemeColors.textMid),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            timeLabel,
+                            style: TextStyle(
+                              color: ParentThemeColors.textSoft,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Icon(
-                          isCompleted ? Icons.verified : Icons.schedule,
-                          size: 16,
-                          color: statusColor,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          status.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: statusColor,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '• $date',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: ParentThemeColors.textMid,
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Expandable document section
-                    if (documents != null && isExpanded) ...[
-                      const SizedBox(height: 12),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Documents Required:',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: ParentThemeColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ...documents.map((doc) => _buildDocumentItem(doc)),
-                    ],
                   ],
                 ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDocumentItem(String docName) {
-    final isUploaded = _documentsUploaded[docName] ?? false;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(
-            isUploaded ? Icons.check_circle : Icons.upload_file,
-            size: 20,
-            color: isUploaded
-                ? ParentThemeColors.successGreen
-                : ParentThemeColors.textSoft,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              docName,
-              style: TextStyle(fontSize: 13, color: ParentThemeColors.textMid),
-            ),
-          ),
-          if (!isUploaded)
-            TextButton(
-              onPressed: () => _uploadDocument(docName),
-              child: const Text(
-                'Upload',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: ParentThemeColors.primaryBlue,
-                ),
-              ),
-            )
-          else
-            TextButton(
-              onPressed: () => _uploadDocument(docName),
-              child: const Text(
-                'Re-upload',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: ParentThemeColors.textSoft,
-                ),
-              ),
-            ),
+              );
+            }),
         ],
       ),
     );
@@ -587,56 +637,112 @@ class _ParentVerificationStatusScreenState
 
   Widget _buildBottomNav(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: ParentThemeColors.pureWhite,
         boxShadow: [
           BoxShadow(
-            color: ParentThemeColors.textDark.withValues(alpha: 0.1),
-            blurRadius: 8,
+            color: ParentThemeColors.textMid.withValues(alpha: 0.1),
+            blurRadius: 10,
             offset: const Offset(0, -2),
           ),
         ],
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () {
-                context.push(NavJeevanRoutes.parentGuidance);
-              },
-              icon: const Icon(Icons.menu_book),
-              label: const Text('Guidance'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                side: const BorderSide(color: ParentThemeColors.primaryBlue),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
+          _buildNavItem(
+            context: context,
+            icon: Icons.dashboard_outlined,
+            label: 'Status',
+            isActive: true,
+            onTap: () {},
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                context.push(NavJeevanRoutes.parentSupport);
-              },
-              icon: const Icon(Icons.support_agent),
-              label: const Text('Get Support'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: ParentThemeColors.primaryBlue,
-                foregroundColor: ParentThemeColors.pureWhite,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 4,
-              ),
-            ),
+          _buildNavItem(
+            context: context,
+            icon: Icons.menu_book,
+            label: 'Guidance',
+            isActive: false,
+            onTap: () => context.push(NavJeevanRoutes.parentGuidance),
+          ),
+          _buildNavItem(
+            context: context,
+            icon: Icons.support_agent,
+            label: 'Support',
+            isActive: false,
+            onTap: () => context.push(NavJeevanRoutes.parentSupport),
+          ),
+          _buildNavItem(
+            context: context,
+            icon: Icons.person_outline,
+            label: 'Profile',
+            isActive: false,
+            onTap: () => context.push(NavJeevanRoutes.parentProfile),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildNavItem({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive
+              ? ParentThemeColors.primaryBlue.withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isActive
+                  ? ParentThemeColors.primaryBlue
+                  : ParentThemeColors.textMid,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                color: isActive
+                    ? ParentThemeColors.primaryBlue
+                    : ParentThemeColors.textMid,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'verified':
+      case 'verification completed':
+        return ParentThemeColors.successGreen;
+      case 'rejected':
+      case 'changes requested':
+        return ParentThemeColors.primaryBlue;
+      case 'in review':
+      case 'document review in progress':
+      case 'awaiting final approval':
+        return ParentThemeColors.warningOrange;
+      default:
+        return ParentThemeColors.primaryBlue;
+    }
   }
 }

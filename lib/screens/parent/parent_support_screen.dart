@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/theme/parent_colors.dart';
 import '../../core/constants/dummy_parent_data.dart';
-import '../../core/constants/dummy_agency_data.dart';
 import '../../core/services/firebase_service.dart';
 import '../../core/widgets/error_popup.dart';
 import '../../core/services/parent_notification_preferences_store.dart';
 import '../../providers/auth_provider.dart';
+import 'parent_support_service_screen.dart';
 
 class ParentSupportScreen extends StatefulWidget {
   const ParentSupportScreen({super.key});
@@ -20,7 +21,17 @@ class ParentSupportScreen extends StatefulWidget {
 class _ParentSupportScreenState extends State<ParentSupportScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final ScrollController _callsScrollController = ScrollController();
   final TextEditingController _chatController = TextEditingController();
+  String? _highlightedSupportRequestId;
+
+  // Stable stream references — must NOT be created inline inside build().
+  // Creating them inside build causes StreamBuilder to reset and go blank on
+  // every setState() call (tab switch, highlight timer, etc.).
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _supportRequestsStream;
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _counselorAssignmentsStream;
+  late final Stream<QuerySnapshot> _counselorDirectoryStream;
+
   bool _supportNotificationsEnabled = true;
   final Map<String, bool> _supportNotificationPrefs = {
     'chatResponses': true,
@@ -34,48 +45,8 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
 
   final Map<String, List<Map<String, String>>> _groupMessages = {};
 
-  final List<String> _callStages = const [
-    'Not Requested',
-    'Requested',
-    'In Progress',
-    'Scheduled',
-    'Completed',
-  ];
-
-  final Map<String, Map<String, dynamic>> _callRequests = {
-    'Counseling Session': {
-      'stage': 0,
-      'process': [
-        'Request submitted',
-        'Counselor assigned',
-        'Session slot confirmed',
-        'Session completed',
-      ],
-      'executions': <String>['No request submitted yet.'],
-    },
-    'Legal Consultation': {
-      'stage': 0,
-      'process': [
-        'Request submitted',
-        'Legal expert assigned',
-        'Consultation slot confirmed',
-        'Consultation completed',
-      ],
-      'executions': <String>['No request submitted yet.'],
-    },
-    'Medical Guidance': {
-      'stage': 0,
-      'process': [
-        'Request submitted',
-        'Medical advisor assigned',
-        'Guidance slot confirmed',
-        'Guidance completed',
-      ],
-      'executions': <String>['No request submitted yet.'],
-    },
-  };
-
   int _selectedFaqCategory = 0;
+  String _selectedHistoryFilter = 'All';
 
   // Track joined groups
   final Set<String> _joinedGroups = {'New Parents Support Circle'};
@@ -101,13 +72,21 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    FirebaseService.instance.ensureSharedCounselorDirectorySeed();
+    _tabController = TabController(length: 5, vsync: this);
     _loadSupportNotificationPreferences();
+    _supportRequestsStream =
+      FirebaseService.instance.watchParentSupportRequests();
+    _counselorAssignmentsStream =
+      FirebaseService.instance.watchParentCounselorAssignments();
+    _counselorDirectoryStream =
+      FirebaseService.instance.watchCounselorDirectory(status: 'available');
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _callsScrollController.dispose();
     _chatController.dispose();
     super.dispose();
   }
@@ -334,26 +313,10 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
     );
   }
 
-  List<Counsellor> _parentRecommendedCounselors() {
-    final matchKeywords = [
-      'adoption',
-      'family',
-      'legal',
-      'financial',
-      'trauma',
-    ];
-
-    final ranked = DummyAgencyData.agencyCounsellors.where((c) {
-      if (c.status != 'available') return false;
-      final specialty = c.specialty.toLowerCase();
-      return matchKeywords.any((keyword) => specialty.contains(keyword));
-    }).toList();
-
-    ranked.sort((a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0));
-    return ranked.take(4).toList();
-  }
-
-  Future<void> _requestCounselorAssignment(Counsellor counselor) async {
+  Future<void> _requestCounselorAssignment({
+    required Map<String, dynamic> counselor,
+    required Map<String, dynamic> supportRequest,
+  }) async {
     final userId = context.read<AuthProvider>().user?.uid;
     if (userId == null) {
       showErrorBottomPopup(
@@ -364,18 +327,39 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
     }
 
     try {
+      final requestId = (supportRequest['requestId'] ?? '').toString();
+      final ngoId = (supportRequest['ngoId'] ?? '').toString();
+      final ngoName = (supportRequest['ngoName'] ?? '').toString();
+      final counselorName = (counselor['name'] ?? 'Counselor').toString();
+      final counselorEmail = (counselor['email'] ?? '').toString();
+
       await FirebaseService.instance.assignCounselorToRequest(
-        counselorName: counselor.name,
-        counselorEmail: counselor.email ?? '',
-        requestId: 'parent_support_$userId',
+        counselorName: counselorName,
+        counselorEmail: counselorEmail,
+        requestId: requestId.isNotEmpty ? requestId : 'parent_support_$userId',
         userId: userId,
         requestType: 'parent',
+        supportRequestId: requestId,
+        ngoId: ngoId,
+        ngoName: ngoName,
+        assignmentStatus: 'Requested',
       );
+
+      if (requestId.isNotEmpty) {
+        await FirebaseService.instance.updateParentSupportRequestStatus(
+          requestId: requestId,
+          status: 'Counselor Requested',
+          phase: 2,
+          actorRole: 'parent',
+          actorId: userId,
+          notes: 'Requested assignment with $counselorName',
+        );
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${counselor.name} assignment requested.'),
+          content: Text('$counselorName assignment requested.'),
           backgroundColor: ParentThemeColors.successGreen,
         ),
       );
@@ -386,307 +370,177 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
     }
   }
 
-  Widget _buildAvailableCounselorsPanel() {
-    final counselors = _parentRecommendedCounselors();
-    if (counselors.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Available Counselors'),
-        const SizedBox(height: 10),
-        ...counselors.map((counselor) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: ParentThemeColors.pureWhite,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: ParentThemeColors.borderColor.withValues(alpha: 0.6),
-              ),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundImage: NetworkImage(counselor.image),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        counselor.name,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: ParentThemeColors.textDark,
-                        ),
-                      ),
-                      Text(
-                        counselor.specialty,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: ParentThemeColors.textMid,
-                        ),
-                      ),
-                      if (counselor.rating != null)
-                        Text(
-                          '⭐ ${counselor.rating} • ${counselor.yearsExperience ?? 0} yrs',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: ParentThemeColors.textMid,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => _requestCounselorAssignment(counselor),
-                  child: const Text('Request'),
-                ),
-              ],
-            ),
-          );
-        }),
-      ],
+  void _openSupportServiceScreen({
+    required String serviceType,
+    required IconData icon,
+    required Color accentColor,
+  }) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ParentSupportServiceScreen(
+          serviceType: serviceType,
+          icon: icon,
+          accentColor: accentColor,
+        ),
+      ),
     );
   }
 
-  void _requestOrProgressCall(String callType) {
-    final callData = _callRequests[callType];
-    if (callData == null) return;
-
-    final int currentStage = callData['stage'] as int;
-    final int nextStage = currentStage < (_callStages.length - 1)
-        ? currentStage + 1
-        : currentStage;
-    final executions = (callData['executions'] as List<dynamic>).cast<String>();
-
-    String newExecution;
-    if (nextStage == 1) {
-      newExecution =
-          '${TimeOfDay.now().format(context)} - Request created for $callType.';
-    } else if (nextStage == 2) {
-      newExecution =
-          '${TimeOfDay.now().format(context)} - Specialist assigned for $callType.';
-    } else if (nextStage == 3) {
-      newExecution =
-          '${TimeOfDay.now().format(context)} - Slot confirmed for $callType.';
-    } else {
-      newExecution =
-          '${TimeOfDay.now().format(context)} - $callType process already completed.';
-    }
-
-    setState(() {
-      callData['stage'] = nextStage;
-      if (executions.length == 1 && executions.first.contains('No request')) {
-        executions.clear();
-      }
-      executions.insert(0, newExecution);
-    });
-
-    _sendSupportNotification('sessionUpdates');
-  }
-
-  void _showCallRequestOverview({String? highlightType}) {
-    showModalBottomSheet(
+  Future<void> _submitCounselorFeedback(String assignmentId) async {
+    final controller = TextEditingController();
+    int rating = 5;
+    final didSubmit = await showDialog<bool>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
+      builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.82,
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: ParentThemeColors.pureWhite,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Submit feedback'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Call Requests: Status, Process & Executions',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: ParentThemeColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Track Counseling Session, Legal Consultation, and Medical Guidance requests.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: ParentThemeColors.textMid,
-                    ),
+                  DropdownButtonFormField<int>(
+                    initialValue: rating,
+                    items: const [1, 2, 3, 4, 5]
+                        .map((value) => DropdownMenuItem<int>(
+                              value: value,
+                              child: Text('$value star${value == 1 ? '' : 's'}'),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setDialogState(() => rating = value);
+                    },
                   ),
                   const SizedBox(height: 12),
-                  Expanded(
-                    child: ListView(
-                      children: _callRequests.entries.map((entry) {
-                        final callType = entry.key;
-                        final data = entry.value;
-                        final stage = data['stage'] as int;
-                        final process = (data['process'] as List<dynamic>)
-                            .cast<String>();
-                        final executions = (data['executions'] as List<dynamic>)
-                            .cast<String>();
-                        final isHighlighted = callType == highlightType;
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: ParentThemeColors.backgroundLight,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isHighlighted
-                                  ? ParentThemeColors.primaryBlue
-                                  : ParentThemeColors.borderColor,
-                              width: isHighlighted ? 1.5 : 1,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      callType,
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                        color: ParentThemeColors.textDark,
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: ParentThemeColors.primaryBlue
-                                          .withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      _callStages[stage],
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: ParentThemeColors.primaryBlue,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                'Process',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: ParentThemeColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              ...List.generate(process.length, (index) {
-                                final completed = index < stage;
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 4),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        completed
-                                            ? Icons.check_circle
-                                            : Icons.radio_button_unchecked,
-                                        size: 14,
-                                        color: completed
-                                            ? ParentThemeColors.successGreen
-                                            : ParentThemeColors.textSoft,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          process[index],
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: completed
-                                                ? ParentThemeColors.textDark
-                                                : ParentThemeColors.textMid,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Executions',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: ParentThemeColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              ...executions
-                                  .take(3)
-                                  .map(
-                                    (execution) => Padding(
-                                      padding: const EdgeInsets.only(bottom: 4),
-                                      child: Text(
-                                        '• $execution',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: ParentThemeColors.textMid,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    _requestOrProgressCall(callType);
-                                    setModalState(() {});
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        ParentThemeColors.primaryBlue,
-                                  ),
-                                  child: Text(
-                                    stage == 0
-                                        ? 'Request Now'
-                                        : stage < 3
-                                        ? 'Update Process'
-                                        : 'View Latest Status',
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                  TextField(
+                    controller: controller,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      hintText: 'Write your feedback',
                     ),
                   ),
                 ],
               ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: const Text('Submit'),
+                ),
+              ],
             );
           },
+        );
+      },
+    );
+
+    if (didSubmit != true) {
+      return;
+    }
+
+    await FirebaseService.instance.submitParentCounselorFeedback(
+      assignmentId: assignmentId,
+      rating: rating,
+      feedback: controller.text.trim(),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Feedback submitted successfully.')),
+    );
+  }
+
+  Widget _buildAvailableCounselorsPanel(Map<String, dynamic> latestRequest) {
+    final requestNgoId = (latestRequest['ngoId'] ?? '').toString();
+    final requestId = (latestRequest['requestId'] ?? '').toString();
+    if (requestId.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: _counselorDirectoryStream,
+      builder: (context, snapshot) {
+        final docs = snapshot.data?.docs ?? const [];
+        final counselors = docs
+            .map((doc) => Map<String, dynamic>.from(doc.data() as Map<String, dynamic>? ?? <String, dynamic>{}))
+            .where((c) {
+              if (requestNgoId.isEmpty) return true;
+              final counselorNgoId = (c['ngoId'] ?? '').toString();
+              return counselorNgoId.isEmpty || counselorNgoId == requestNgoId;
+            })
+            .take(6)
+            .toList();
+
+        if (counselors.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle('Available Counselors (NGO linked)'),
+            const SizedBox(height: 10),
+            ...counselors.map((counselor) {
+              final counselorName = (counselor['name'] ?? 'Counselor').toString();
+              final specialty = (counselor['specialty'] ?? 'Support').toString();
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: ParentThemeColors.pureWhite,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: ParentThemeColors.borderColor.withValues(alpha: 0.6),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      child: Text(
+                        counselorName.isEmpty ? '?' : counselorName[0].toUpperCase(),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            counselorName,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: ParentThemeColors.textDark,
+                            ),
+                          ),
+                          Text(
+                            specialty,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: ParentThemeColors.textMid,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => _requestCounselorAssignment(
+                        counselor: counselor,
+                        supportRequest: latestRequest,
+                      ),
+                      child: const Text('Request'),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
         );
       },
     );
@@ -898,6 +752,7 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
                   _buildSupportGroupsTab(),
                   _buildFAQsTab(),
                   _buildChatbotTab(),
+                  _buildCounselingHistoryTab(),
                 ],
               ),
             ),
@@ -983,55 +838,522 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
             Tab(text: 'Groups', height: 44),
             Tab(text: 'FAQs', height: 44),
             Tab(text: 'Chat', height: 44),
+            Tab(text: 'History', height: 44),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildCounselingHistoryTab() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _supportRequestsStream,
+      builder: (context, requestSnapshot) {
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: _counselorAssignmentsStream,
+          builder: (context, assignmentSnapshot) {
+            final requests = requestSnapshot.data?.docs
+                    .map((doc) => doc.data())
+                    .toList() ??
+                const <Map<String, dynamic>>[];
+            final assignments = assignmentSnapshot.data?.docs
+                    .map((doc) => doc.data())
+                    .toList() ??
+                const <Map<String, dynamic>>[];
+
+            final historyEntries = <Map<String, dynamic>>[];
+
+            for (final request in requests) {
+              final history =
+                  (request['history'] as List<dynamic>? ?? const <dynamic>[])
+                      .map((entry) => Map<String, dynamic>.from(
+                            entry as Map<String, dynamic>,
+                          ))
+                      .toList();
+              final requestId = (request['requestId'] ?? '').toString();
+              final serviceType =
+                  (request['serviceType'] ?? 'Support').toString();
+              for (final item in history) {
+                historyEntries.add({
+                  'title': item['message'] ?? 'Request update',
+                  'subtitle': '$serviceType • Request: $requestId',
+                  'status': request['status'] ?? 'Requested',
+                  'time': item['createdAt'],
+                });
+              }
+            }
+
+            for (final assignment in assignments) {
+              final history =
+                  (assignment['history'] as List<dynamic>? ?? const <dynamic>[])
+                      .map((entry) => Map<String, dynamic>.from(
+                            entry as Map<String, dynamic>,
+                          ))
+                      .toList();
+              final counselorName =
+                  (assignment['counselorName'] ?? 'Counselor').toString();
+              final requestId = (assignment['requestId'] ?? '').toString();
+              for (final item in history) {
+                historyEntries.add({
+                  'title': item['message'] ?? 'Assignment update',
+                  'subtitle': '$counselorName • Request: $requestId',
+                  'status': item['status'] ?? assignment['status'] ?? 'Requested',
+                  'time': item['createdAt'],
+                });
+              }
+            }
+
+            historyEntries.sort((a, b) {
+              final aTs = a['time'];
+              final bTs = b['time'];
+              if (aTs is! Timestamp && bTs is! Timestamp) return 0;
+              if (aTs is! Timestamp) return 1;
+              if (bTs is! Timestamp) return -1;
+              return bTs.compareTo(aTs);
+            });
+
+            final filteredHistoryEntries = _selectedHistoryFilter == 'All'
+                ? historyEntries
+                : historyEntries
+                    .where((entry) =>
+                        (entry['status'] ?? '').toString() ==
+                        _selectedHistoryFilter)
+                    .toList();
+
+            if (historyEntries.isEmpty) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: _buildInfoBanner(
+                  'No counseling history yet. Once requests and assignment updates happen, timeline entries will appear here.',
+                  Icons.history,
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  color: ParentThemeColors.pureWhite,
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        'All',
+                        'Accepted',
+                        'Scheduled',
+                        'In Session',
+                        'Completed',
+                        'Declined',
+                      ].map((filter) {
+                        final selected = _selectedHistoryFilter == filter;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(filter),
+                            selected: selected,
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedHistoryFilter = filter;
+                              });
+                            },
+                            selectedColor:
+                                ParentThemeColors.primaryBlue.withValues(alpha: 0.15),
+                            backgroundColor: ParentThemeColors.backgroundLight,
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              color: selected
+                                  ? ParentThemeColors.primaryBlue
+                                  : ParentThemeColors.textMid,
+                              fontWeight:
+                                  selected ? FontWeight.w700 : FontWeight.w500,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: filteredHistoryEntries.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Text(
+                              'No entries for "$_selectedHistoryFilter".',
+                              style: const TextStyle(
+                                color: ParentThemeColors.textMid,
+                              ),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: filteredHistoryEntries.length,
+                          itemBuilder: (context, index) {
+                            final entry = filteredHistoryEntries[index];
+                final status = (entry['status'] ?? 'Updated').toString();
+                final timestamp = entry['time'];
+                final timeText = timestamp is Timestamp
+                    ? _formatTimelineDateTime(timestamp.toDate())
+                    : '--';
+
+                Color statusColor = ParentThemeColors.textSoft;
+                if (status == 'Accepted') {
+                  statusColor = ParentThemeColors.successGreen;
+                } else if (status == 'Scheduled') {
+                  statusColor = ParentThemeColors.infoBlue;
+                } else if (status == 'In Session') {
+                  statusColor = ParentThemeColors.warningOrange;
+                } else if (status == 'Completed') {
+                  statusColor = ParentThemeColors.primaryBlue;
+                } else if (status == 'Declined') {
+                  statusColor = ParentThemeColors.errorRed;
+                }
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: ParentThemeColors.pureWhite,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: ParentThemeColors.borderColor),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        margin: const EdgeInsets.only(top: 6),
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              (entry['title'] ?? 'Update').toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: ParentThemeColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              (entry['subtitle'] ?? '').toString(),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: ParentThemeColors.textMid,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$status • $timeText',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: statusColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _formatTimelineDateTime(DateTime dt) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+    final minute = dt.minute.toString().padLeft(2, '0');
+    final meridian = dt.hour >= 12 ? 'PM' : 'AM';
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year}, $hour:$minute $meridian';
+  }
+
   Widget _buildSupportCallsTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildEmergencyCard(),
-          const SizedBox(height: 16),
-          _buildAvailableCounselorsPanel(),
-          const SizedBox(height: 8),
-          _buildSectionTitle('Scheduled Counseling Calls'),
-          const SizedBox(height: 12),
-          _buildCallCard(
-            title: 'Adoption Counselor - Ms. Priya Sharma',
-            date: 'March 12, 2026',
-            time: '3:00 PM - 4:00 PM',
-            status: 'Upcoming',
-            statusColor: ParentThemeColors.successGreen,
-            icon: Icons.video_call,
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _supportRequestsStream,
+      builder: (context, supportSnapshot) {
+        final requests = (supportSnapshot.data?.docs ?? [])
+          .map((doc) => doc.data())
+          .toList()
+          ..sort((a, b) {
+            final aTs = a['createdAt'];
+            final bTs = b['createdAt'];
+            if (aTs is! Timestamp && bTs is! Timestamp) return 0;
+            if (aTs is! Timestamp) return 1;
+            if (bTs is! Timestamp) return -1;
+              return bTs.compareTo(aTs);
+          });
+        final latestRequest = requests.isNotEmpty ? requests.first : <String, dynamic>{};
+
+        return SingleChildScrollView(
+          controller: _callsScrollController,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildEmergencyCard(),
+              const SizedBox(height: 16),
+              _buildSectionTitle('Request a Call'),
+              const SizedBox(height: 12),
+              _buildRequestCallButtons(),
+              const SizedBox(height: 16),
+              if (latestRequest.isNotEmpty) ...[
+                _buildAvailableCounselorsPanel(latestRequest),
+                const SizedBox(height: 12),
+              ],
+              _buildSectionTitle('Call Status / Process / History'),
+              const SizedBox(height: 10),
+              if (requests.isEmpty)
+                _buildInfoBanner(
+                  'No support request yet. Create one above and NGO routing, process phases, and updates will appear here.',
+                  Icons.info_outline,
+                )
+              else
+                ...requests.map((request) {
+                  final requestId = (request['requestId'] ?? '').toString();
+                  final isHighlighted =
+                      requestId.isNotEmpty && requestId == _highlightedSupportRequestId;
+                  final serviceType = (request['serviceType'] ?? 'Support').toString();
+                  final ngoName = (request['ngoName'] ?? 'NGO').toString();
+                  final status = (request['status'] ?? 'Requested').toString();
+                  final phase = (request['phase'] ?? 1) as int;
+                  final process = (request['process'] as List<dynamic>? ?? const <dynamic>[])
+                      .map((e) => e.toString())
+                      .toList();
+                  final history = (request['history'] as List<dynamic>? ?? const <dynamic>[])
+                      .map((e) => Map<String, dynamic>.from(e as Map<String, dynamic>? ?? <String, dynamic>{}))
+                      .toList();
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: ParentThemeColors.pureWhite,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isHighlighted
+                            ? ParentThemeColors.primaryBlue
+                            : ParentThemeColors.borderColor,
+                        width: isHighlighted ? 1.6 : 1,
+                      ),
+                      boxShadow: isHighlighted
+                          ? [
+                              BoxShadow(
+                                color: ParentThemeColors.primaryBlue
+                                    .withValues(alpha: 0.22),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$serviceType • $ngoName',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: ParentThemeColors.textDark,
+                          ),
+                        ),
+                        if (isHighlighted) ...[
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Newly created request',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: ParentThemeColors.primaryBlue,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 4),
+                        Text(
+                          'Status: $status',
+                          style: const TextStyle(color: ParentThemeColors.primaryBlue),
+                        ),
+                        const SizedBox(height: 6),
+                        ...List.generate(process.length, (index) {
+                          final done = (index + 1) <= phase;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  done ? Icons.check_circle : Icons.radio_button_unchecked,
+                                  size: 14,
+                                  color: done
+                                      ? ParentThemeColors.successGreen
+                                      : ParentThemeColors.textSoft,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    process[index],
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        if (history.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Latest updates',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 4),
+                          ...history.take(3).map(
+                            (entry) => Text(
+                              '• ${(entry['message'] ?? 'Update').toString()}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }),
+              const SizedBox(height: 10),
+              _buildSectionTitle('Counselor Connect & History'),
+              const SizedBox(height: 10),
+              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: _counselorAssignmentsStream,
+                builder: (context, assignmentSnapshot) {
+                  final assignments = (assignmentSnapshot.data?.docs ?? [])
+                      .map((doc) => doc.data())
+                      .toList()
+                    ..sort((a, b) {
+                        final aTs = a['assignedAt'];
+                        final bTs = b['assignedAt'];
+                        if (aTs is! Timestamp && bTs is! Timestamp) return 0;
+                        if (aTs is! Timestamp) return 1;
+                        if (bTs is! Timestamp) return -1;
+                        return bTs.compareTo(aTs);
+                      });
+                  if (assignments.isEmpty) {
+                    return _buildInfoBanner(
+                      'No counselor assignments yet. Once NGO assigns a counselor, you can connect, track slot, and submit feedback here.',
+                      Icons.support_agent,
+                    );
+                  }
+
+                  return Column(
+                    children: assignments.map((assignment) {
+                      final assignmentId = (assignment['assignmentId'] ?? '').toString();
+                      final counselorName =
+                          (assignment['counselorName'] ?? 'Counselor').toString();
+                      final counselorEmail =
+                          (assignment['counselorEmail'] ?? 'Not available').toString();
+                      final status = (assignment['status'] ?? 'Requested').toString();
+                      final slot = (assignment['slot'] ?? 'To be shared by NGO').toString();
+                      final feedback = Map<String, dynamic>.from(
+                        assignment['feedback'] as Map<String, dynamic>? ?? <String, dynamic>{},
+                      );
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: ParentThemeColors.pureWhite,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: ParentThemeColors.borderColor),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              counselorName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: ParentThemeColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text('Status: $status'),
+                            Text('Slot: $slot'),
+                            Text('Contact: $counselorEmail'),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: counselorEmail == 'Not available'
+                                      ? null
+                                      : () async {
+                                          await FirebaseService.instance.logCounselorCall(
+                                            contact: counselorEmail,
+                                            source: 'parent_support_assignment',
+                                          );
+                                          if (!mounted) return;
+                                          ScaffoldMessenger.of(this.context).showSnackBar(
+                                            const SnackBar(content: Text('Connect request logged.')),
+                                          );
+                                        },
+                                  icon: const Icon(Icons.call_outlined),
+                                  label: const Text('Connect'),
+                                ),
+                                ElevatedButton.icon(
+                                  onPressed: assignmentId.isEmpty
+                                      ? null
+                                      : () => _submitCounselorFeedback(assignmentId),
+                                  icon: const Icon(Icons.rate_review_outlined),
+                                  label: const Text('Feedback'),
+                                ),
+                              ],
+                            ),
+                            if (feedback.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'Your feedback: ${feedback['rating'] ?? '-'}★ • ${(feedback['comment'] ?? '').toString()}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            ],
           ),
-          _buildCallCard(
-            title: 'Legal Advisor - Mr. Rajesh Kumar',
-            date: 'March 15, 2026',
-            time: '11:00 AM - 12:00 PM',
-            status: 'Scheduled',
-            statusColor: ParentThemeColors.infoBlue,
-            icon: Icons.gavel,
-          ),
-          const SizedBox(height: 16),
-          _buildSectionTitle('Request a Call'),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _showCallRequestOverview(),
-              icon: const Icon(Icons.list_alt),
-              label: const Text('View Calls Status / Process / Executions'),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _buildRequestCallButtons(),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1137,91 +1459,6 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
     );
   }
 
-  Widget _buildCallCard({
-    required String title,
-    required String date,
-    required String time,
-    required String status,
-    required Color statusColor,
-    required IconData icon,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: ParentThemeColors.pureWhite,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: statusColor, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: ParentThemeColors.textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$date • $time',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: ParentThemeColors.textMid,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: statusColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildRequestCallButtons() {
     return Column(
       children: [
@@ -1229,24 +1466,33 @@ class _ParentSupportScreenState extends State<ParentSupportScreen>
           icon: Icons.psychology,
           label: 'Counseling Session',
           color: ParentThemeColors.primaryBlue,
-          onTap: () =>
-              _showCallRequestOverview(highlightType: 'Counseling Session'),
+          onTap: () => _openSupportServiceScreen(
+            serviceType: 'Counseling Session',
+            icon: Icons.psychology,
+            accentColor: ParentThemeColors.primaryBlue,
+          ),
         ),
         const SizedBox(height: 8),
         _buildActionButton(
           icon: Icons.account_balance,
           label: 'Legal Consultation',
           color: ParentThemeColors.successGreen,
-          onTap: () =>
-              _showCallRequestOverview(highlightType: 'Legal Consultation'),
+          onTap: () => _openSupportServiceScreen(
+            serviceType: 'Legal Consultation',
+            icon: Icons.account_balance,
+            accentColor: ParentThemeColors.successGreen,
+          ),
         ),
         const SizedBox(height: 8),
         _buildActionButton(
           icon: Icons.medical_services,
           label: 'Medical Guidance',
           color: ParentThemeColors.pinkDark,
-          onTap: () =>
-              _showCallRequestOverview(highlightType: 'Medical Guidance'),
+          onTap: () => _openSupportServiceScreen(
+            serviceType: 'Medical Guidance',
+            icon: Icons.medical_services,
+            accentColor: ParentThemeColors.pinkDark,
+          ),
         ),
       ],
     );

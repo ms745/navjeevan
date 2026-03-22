@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/text_styles.dart';
-// Removed unused google_maps_flutter import as this tab uses a simulated map.
 
 class AIRiskTab extends StatefulWidget {
   const AIRiskTab({super.key});
@@ -13,6 +15,48 @@ class AIRiskTab extends StatefulWidget {
 class _AIRiskTabState extends State<AIRiskTab> {
   String _selectedScenario = 'Baseline';
   String _selectedTimeframe = '30D';
+  MapType _mapType = MapType.normal;
+  GoogleMapController? _riskMapController;
+
+  final LatLng _puneCenter = const LatLng(18.5204, 73.8567);
+  final List<_RegionRiskPoint> _regionRiskPoints = const [
+    _RegionRiskPoint(
+      name: 'Hadapsar',
+      position: LatLng(18.5089, 73.9259),
+      riskScore: 78,
+      impactedCases: 182,
+    ),
+    _RegionRiskPoint(
+      name: 'Pune Central',
+      position: LatLng(18.5204, 73.8567),
+      riskScore: 56,
+      impactedCases: 149,
+    ),
+    _RegionRiskPoint(
+      name: 'Aundh',
+      position: LatLng(18.5580, 73.8075),
+      riskScore: 33,
+      impactedCases: 74,
+    ),
+    _RegionRiskPoint(
+      name: 'Pimpri',
+      position: LatLng(18.6298, 73.7997),
+      riskScore: 68,
+      impactedCases: 121,
+    ),
+    _RegionRiskPoint(
+      name: 'Viman Nagar',
+      position: LatLng(18.5679, 73.9143),
+      riskScore: 42,
+      impactedCases: 89,
+    ),
+    _RegionRiskPoint(
+      name: 'Hinjewadi',
+      position: LatLng(18.5913, 73.7389),
+      riskScore: 24,
+      impactedCases: 53,
+    ),
+  ];
 
   final List<_RiskRecommendation> _recommendations = [
     _RiskRecommendation(
@@ -82,6 +126,79 @@ class _AIRiskTabState extends State<AIRiskTab> {
       'label': 'ELEVATED RISK',
       'hotspots': [0.40, 0.35],
     };
+  }
+
+  int get _totalRegions => _regionRiskPoints.length;
+
+  int get _lowRiskRegions =>
+      _regionRiskPoints.where((point) => point.riskScore < 34).length;
+
+  int get _mediumRiskRegions =>
+      _regionRiskPoints.where((point) => point.riskScore >= 34 && point.riskScore < 67).length;
+
+  int get _highRiskRegions =>
+      _regionRiskPoints.where((point) => point.riskScore >= 67).length;
+
+  double _riskPercent(int count) => _totalRegions == 0 ? 0 : (count / _totalRegions) * 100;
+
+  Color _riskColor(int score) {
+    if (score >= 67) return Colors.red.shade600;
+    if (score >= 34) return Colors.orange.shade600;
+    return Colors.green.shade600;
+  }
+
+  String _riskLabel(int score) {
+    if (score >= 67) return 'High';
+    if (score >= 34) return 'Medium';
+    return 'Low';
+  }
+
+  Set<Circle> get _riskCircles {
+    return _regionRiskPoints
+        .map(
+          (point) => Circle(
+            circleId: CircleId('risk_${point.name}'),
+            center: point.position,
+            radius: 1700,
+            strokeWidth: 2,
+            strokeColor: _riskColor(point.riskScore),
+            fillColor: _riskColor(point.riskScore).withValues(alpha: 0.25),
+          ),
+        )
+        .toSet();
+  }
+
+  Set<Marker> get _riskMarkers {
+    return _regionRiskPoints
+        .map(
+          (point) => Marker(
+            markerId: MarkerId('risk_marker_${point.name}'),
+            position: point.position,
+            infoWindow: InfoWindow(
+              title: '${point.name} • ${_riskLabel(point.riskScore)} Risk',
+              snippet:
+                  'Risk score: ${point.riskScore}% | Impacted: ${point.impactedCases} cases',
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              point.riskScore >= 67
+                  ? BitmapDescriptor.hueRed
+                  : point.riskScore >= 34
+                  ? BitmapDescriptor.hueOrange
+                  : BitmapDescriptor.hueGreen,
+            ),
+          ),
+        )
+        .toSet();
+  }
+
+  Future<void> _focusRiskMap() async {
+    final controller = _riskMapController;
+    if (controller == null) return;
+    await controller.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: _puneCenter, zoom: 11.3),
+      ),
+    );
   }
 
   void _toggleRecommendation(_RiskRecommendation recommendation) {
@@ -189,10 +306,6 @@ class _AIRiskTabState extends State<AIRiskTab> {
   }
 
   Widget _buildMapSection() {
-    final riskData = _riskData;
-    final hotspotA = riskData['hotspots'][0] as double;
-    final hotspotB = riskData['hotspots'][1] as double;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -202,113 +315,175 @@ class _AIRiskTabState extends State<AIRiskTab> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 12),
-        Stack(
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
-            Container(
-              height: 240,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                image: const DecorationImage(
-                  image: NetworkImage(
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuAzt4rT4-rvSwIG65ddh8aycaGgR_vzQI9hwPDga6WSxu5iure6wabkquY130vXlk-dtieDPTTE-J2cn2Kn_5ZQmqjRhjdPrYzDy9kwuuDqxsj0FYF7LHV9gPKB_Lm2zMoqEuw_jJIdp0QPjvBxWbv6M5jIGC0G55QA8M1mDv8MqBBPY3AADczFkbBZh_iCLKRYr5Qc0SBa36Y1RtPqE7GLwEdT-1zS_bvejI0uAVTtjlnVFwtse0SyBkWTaSRHXi3FKxRB7Sf6rJZo',
-                  ),
-                  fit: BoxFit.cover,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+            _mapTypeChip('Default', MapType.normal),
+            _mapTypeChip('Satellite', MapType.satellite),
+            _mapTypeChip('Terrain', MapType.terrain),
+            _mapTypeChip('Hybrid', MapType.hybrid),
+            TextButton.icon(
+              onPressed: _focusRiskMap,
+              icon: const Icon(Icons.center_focus_strong_rounded, size: 16),
+              label: const Text('Reset View'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 260,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: NavJeevanColors.borderColor.withValues(alpha: 0.35),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-              child: Stack(
-                children: [
-                  // Heatmap simulation
-                  Positioned(
-                    top: 40,
-                    left: 100,
-                    child: Container(
-                      width: 60 * hotspotA,
-                      height: 60 * hotspotA,
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.4),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.red.withValues(alpha: 0.4),
-                            blurRadius: 40,
-                            spreadRadius: 20,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 60,
-                    right: 80,
-                    child: Container(
-                      width: 60 * hotspotB,
-                      height: 60 * hotspotB,
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.35),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.red.withValues(alpha: 0.35),
-                            blurRadius: 30,
-                            spreadRadius: 15,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: _puneCenter,
+                zoom: 11.3,
+              ),
+              onMapCreated: (controller) => _riskMapController = controller,
+              mapType: _mapType,
+              markers: _riskMarkers,
+              circles: _riskCircles,
+              zoomControlsEnabled: true,
+              myLocationButtonEnabled: false,
+              mapToolbarEnabled: false,
+              compassEnabled: true,
+              minMaxZoomPreference: const MinMaxZoomPreference(6, 18),
+              gestureRecognizers: {
+                Factory<OneSequenceGestureRecognizer>(
+                  () => EagerGestureRecognizer(),
+                ),
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _riskLegendTile(
+                label: 'Low',
+                color: Colors.green.shade600,
+                count: _lowRiskRegions,
+                percent: _riskPercent(_lowRiskRegions),
               ),
             ),
-            Positioned(
-              bottom: 12,
-              left: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: NavJeevanColors.pureWhite.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.5),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'REGION FOCUS',
-                      style: TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
-                        color: NavJeevanColors.textSoft,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    Text(
-                      'Pune Metropolitan Area',
-                      style: NavJeevanTextStyles.bodySmall.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _riskLegendTile(
+                label: 'Medium',
+                color: Colors.orange.shade600,
+                count: _mediumRiskRegions,
+                percent: _riskPercent(_mediumRiskRegions),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _riskLegendTile(
+                label: 'High',
+                color: Colors.red.shade600,
+                count: _highRiskRegions,
+                percent: _riskPercent(_highRiskRegions),
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _mapTypeChip(String label, MapType type) {
+    final selected = _mapType == type;
+    return InkWell(
+      onTap: () => setState(() => _mapType = type),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected
+              ? NavJeevanColors.primaryRose.withValues(alpha: 0.12)
+              : NavJeevanColors.pureWhite,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected
+                ? NavJeevanColors.primaryRose.withValues(alpha: 0.3)
+                : NavJeevanColors.borderColor.withValues(alpha: 0.35),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: selected
+                ? NavJeevanColors.primaryRose
+                : NavJeevanColors.textSoft,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _riskLegendTile({
+    required String label,
+    required Color color,
+    required int count,
+    required double percent,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: NavJeevanColors.pureWhite,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: NavJeevanColors.borderColor.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.circle, size: 10, color: color),
+              const SizedBox(width: 6),
+              Text(
+                '$label Risk',
+                style: NavJeevanTextStyles.bodySmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$count Regions',
+            style: NavJeevanTextStyles.bodySmall.copyWith(
+              color: NavJeevanColors.textSoft,
+            ),
+          ),
+          Text(
+            '${percent.toStringAsFixed(1)}%',
+            style: NavJeevanTextStyles.titleSmall.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -560,6 +735,20 @@ class _AIRiskTabState extends State<AIRiskTab> {
       ),
     );
   }
+}
+
+class _RegionRiskPoint {
+  const _RegionRiskPoint({
+    required this.name,
+    required this.position,
+    required this.riskScore,
+    required this.impactedCases,
+  });
+
+  final String name;
+  final LatLng position;
+  final int riskScore;
+  final int impactedCases;
 }
 
 class _RiskRecommendation {

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/route_names.dart';
 import '../../core/theme/parent_colors.dart';
 import '../../core/constants/dummy_parent_data.dart';
+import '../../core/services/firebase_service.dart';
 
 class ParentGuidanceScreen extends StatefulWidget {
   const ParentGuidanceScreen({super.key});
@@ -67,9 +69,19 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentParent = DummyParentData.getCurrentParent();
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseService.instance.watchCurrentParentApplication(),
+      builder: (context, snapshot) {
+        final currentParent = DummyParentData.getCurrentParent();
+        final liveData = snapshot.data?.data() ?? <String, dynamic>{};
+        final assignedChild = Map<String, dynamic>.from(
+          liveData['assignedChild'] as Map<String, dynamic>? ?? <String, dynamic>{},
+        );
+        final adoptionStatus = (liveData['adoptionStatus'] ?? '').toString();
+        final verificationStage = (liveData['verificationStage'] ?? '').toString();
+        final familyName = (liveData['familyName'] ?? '').toString();
 
-    return Scaffold(
+        return Scaffold(
       backgroundColor: ParentThemeColors.backgroundLight,
       body: SafeArea(
         child: Column(
@@ -84,9 +96,13 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 16),
-                    _buildHeroSection(currentParent),
+                    _buildHeroSection(currentParent, assignedChild, familyName),
+                    if (assignedChild.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _buildPersonalizedGuidanceCard(assignedChild),
+                    ],
                     const SizedBox(height: 16),
-                    _buildQuickStats(),
+                    _buildQuickStats(adoptionStatus, verificationStage, assignedChild),
                     const SizedBox(height: 24),
                     _buildSectionTitle('Core Resources'),
                     const SizedBox(height: 12),
@@ -108,6 +124,8 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
         ),
       ),
       bottomNavigationBar: _buildBottomNav(context),
+        );
+      },
     );
   }
 
@@ -264,7 +282,11 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
     );
   }
 
-  Widget _buildHeroSection(dynamic parent) {
+  Widget _buildHeroSection(dynamic parent, Map<String, dynamic> assignedChild, String familyName) {
+    final childNickname = (assignedChild['nickname'] ?? '').toString();
+    final childTag = assignedChild.isEmpty
+        ? 'General guidance'
+        : 'Personalized for ${childNickname.isNotEmpty ? childNickname : 'your assigned child'}';
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -303,29 +325,288 @@ class _ParentGuidanceScreenState extends State<ParentGuidanceScreen> {
               height: 1.5,
             ),
           ),
+          const SizedBox(height: 8),
+          Text(
+            childTag,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: ParentThemeColors.deepBlue,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildQuickStats() {
+  Widget _buildPersonalizedGuidanceCard(Map<String, dynamic> assignedChild) {
+    final nickname      = (assignedChild['nickname']       ?? '–').toString();
+    final age           = (assignedChild['age']            ?? '–').toString();
+    final gender        = (assignedChild['gender']         ?? '–').toString();
+    final healthStatus  = (assignedChild['healthStatus']   ?? '–').toString();
+    final bloodGroup    = (assignedChild['bloodGroup']     ?? '–').toString().toUpperCase();
+    final complexion    = (assignedChild['complexion']     ?? '–').toString();
+    final heightCm      = (assignedChild['heightCm']       ?? '–').toString();
+    final weightKg      = (assignedChild['weightKg']       ?? '–').toString();
+    final medicalNotes  = (assignedChild['medicalNotes']   ?? '').toString();
+    final specialFeatures = (assignedChild['specialFeatures'] ?? '–').toString();
+    final photoUrl      = (assignedChild['photoUrl']       ?? '').toString();
+
+    final genderColor = gender.toLowerCase() == 'female'
+        ? ParentThemeColors.pinkDark
+        : ParentThemeColors.primaryBlue;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: ParentThemeColors.pureWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ParentThemeColors.primaryBlue.withValues(alpha: 0.25)),
+        boxShadow: [
+          BoxShadow(
+            color: ParentThemeColors.primaryBlue.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row with photo + name
+          Row(
+            children: [
+              // Child photo / avatar
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: genderColor.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: photoUrl.isNotEmpty
+                      ? Image.network(
+                          photoUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _childAvatarFallback(gender, genderColor),
+                        )
+                      : _childAvatarFallback(gender, genderColor),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.child_care_rounded,
+                            size: 14, color: genderColor),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'YOUR ASSIGNED CHILD',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: ParentThemeColors.textMid,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      nickname,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: ParentThemeColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$gender • $age',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: genderColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(
+            height: 1,
+            color: ParentThemeColors.borderColor.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 12),
+          // Stats grid
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _childInfoChip(Icons.favorite_rounded, 'Blood', bloodGroup,
+                  ParentThemeColors.pinkDark),
+              _childInfoChip(Icons.straighten_rounded, 'Height',
+                  heightCm != '–' ? '$heightCm cm' : '–',
+                  ParentThemeColors.primaryBlue),
+              _childInfoChip(Icons.monitor_weight_outlined, 'Weight',
+                  weightKg != '–' ? '$weightKg kg' : '–',
+                  ParentThemeColors.successGreen),
+              _childInfoChip(Icons.palette_outlined, 'Complexion', complexion,
+                  ParentThemeColors.warningOrange),
+              _childInfoChip(Icons.health_and_safety_outlined, 'Health',
+                  healthStatus, ParentThemeColors.infoBlue),
+              if (specialFeatures != '–')
+                _childInfoChip(Icons.star_rounded, 'Special',
+                    specialFeatures, ParentThemeColors.deepBlue),
+            ],
+          ),
+          if (medicalNotes.isNotEmpty) ...[  
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: ParentThemeColors.warningOrange.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color:
+                      ParentThemeColors.warningOrange.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.medical_information_outlined,
+                      size: 14,
+                      color: ParentThemeColors.warningOrange),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Medical Notes: $medicalNotes',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: ParentThemeColors.textDark,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _childAvatarFallback(String gender, Color color) {
+    return Container(
+      color: color.withValues(alpha: 0.08),
+      child: Icon(
+        gender.toLowerCase() == 'female'
+            ? Icons.face_retouching_natural_rounded
+            : Icons.face_rounded,
+        size: 28,
+        color: color.withValues(alpha: 0.6),
+      ),
+    );
+  }
+
+  Widget _childInfoChip(
+      IconData icon, String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: ParentThemeColors.textDark,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickStats(
+    String adoptionStatus,
+    String verificationStage,
+    Map<String, dynamic> assignedChild,
+  ) {
+    // Derive a meaningful adoption progress label
+    String progressLabel;
+    Color progressColor;
+    if (adoptionStatus == 'Child Assigned') {
+      progressLabel = 'Child Placed';
+      progressColor = ParentThemeColors.successGreen;
+    } else if (adoptionStatus == 'Verified') {
+      progressLabel = 'Awaiting Child';
+      progressColor = ParentThemeColors.primaryBlue;
+    } else if (verificationStage.isNotEmpty &&
+        verificationStage != 'Pending') {
+      progressLabel = 'Under Review';
+      progressColor = ParentThemeColors.warningOrange;
+    } else {
+      progressLabel = 'Registered';
+      progressColor = ParentThemeColors.textMid;
+    }
+
+    final childAssigned = assignedChild.isNotEmpty;
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
-            label: 'Progress',
-            value: 'Step 2/4',
+            label: 'Adoption Status',
+            value: progressLabel,
             icon: Icons.trending_up,
-            color: ParentThemeColors.primaryBlue,
+            color: progressColor,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            label: 'Documents',
-            value: '80% Ready',
-            icon: Icons.description,
-            color: ParentThemeColors.pinkDark,
+            label: 'Child',
+            value: childAssigned ? 'Assigned ✓' : 'Pending',
+            icon: childAssigned
+                ? Icons.child_care_rounded
+                : Icons.hourglass_empty_rounded,
+            color: childAssigned
+                ? ParentThemeColors.successGreen
+                : ParentThemeColors.pinkDark,
           ),
         ),
       ],

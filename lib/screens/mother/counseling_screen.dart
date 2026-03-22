@@ -18,62 +18,44 @@ class CounselingScreen extends StatefulWidget {
   State<CounselingScreen> createState() => _CounselingScreenState();
 }
 
-class _CounselingScreenState extends State<CounselingScreen> {
+class _CounselingScreenState extends State<CounselingScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _screenTabController;
   final TextEditingController _searchController = TextEditingController();
   String _selectedMode = 'All';
+  String _selectedHistoryFilter = 'All';
 
   final List<String> _modes = const ['All', 'Video', 'Audio', 'In-Person'];
 
-  final List<Map<String, dynamic>> _counselors = [
-    {
-      'id': 'counselor_1',
-      'name': 'Dr. Sarah Miller',
-      'specialty': 'Perinatal Specialist',
-      'status': 'Available Now',
-      'statusColor': Colors.green,
-      'mode': 'Video',
-      'languages': 'English, Hindi',
-      'experience': '8 years',
-      'rating': 4.8,
-      'fee': '₹600/session',
-      'contact': '+91 9988776611',
-      'nextSlot': 'Today, 4:30 PM',
-      'about':
-          'Focuses on emotional support for pregnancy and early motherhood transitions.',
-    },
-    {
-      'id': 'counselor_2',
-      'name': 'Maya Thompson',
-      'specialty': 'Family Therapist',
-      'status': 'Next in 2 Hours',
-      'statusColor': Colors.orange,
-      'mode': 'In-Person',
-      'languages': 'English, Marathi',
-      'experience': '6 years',
-      'rating': 4.6,
-      'fee': '₹500/session',
-      'contact': '+91 9988776622',
-      'nextSlot': 'Today, 6:00 PM',
-      'about':
-          'Helps mothers and families manage conflict, stress, and communication challenges.',
-    },
-    {
-      'id': 'counselor_3',
-      'name': 'Dr. James Chen',
-      'specialty': 'Child Psychologist',
-      'status': 'Available Now',
-      'statusColor': Colors.green,
-      'mode': 'Audio',
-      'languages': 'English',
-      'experience': '10 years',
-      'rating': 4.9,
-      'fee': '₹700/session',
-      'contact': '+91 9988776633',
-      'nextSlot': 'Today, 5:15 PM',
-      'about':
-          'Supports mothers on child behavior, bonding, and developmental well-being.',
-    },
-  ];
+  String _modeFromSpecialty(String specialty) {
+    final value = specialty.toLowerCase();
+    if (value.contains('legal') || value.contains('law')) return 'In-Person';
+    if (value.contains('medical') || value.contains('maternal') || value.contains('health')) {
+      return 'Audio';
+    }
+    return 'Video';
+  }
+
+  late final List<Map<String, dynamic>> _counselors =
+      DummyAgencyData.agencyCounsellors.map((c) {
+        final isAvailable = c.status == 'available';
+        final mode = _modeFromSpecialty(c.specialty);
+        return {
+          'id': c.email ?? c.name,
+          'name': c.name,
+          'specialty': c.specialty,
+          'status': isAvailable ? 'Available Now' : 'Next in 2 Hours',
+          'statusColor': isAvailable ? Colors.green : Colors.orange,
+          'mode': mode,
+          'languages': (c.languages ?? const ['English']).join(', '),
+          'experience': '${c.yearsExperience ?? 5} years',
+          'rating': c.rating ?? 4.5,
+          'fee': mode == 'In-Person' ? '₹700/session' : '₹600/session',
+          'contact': c.phone ?? '+91 00000 00000',
+          'nextSlot': '${(c.availabilityDays.isNotEmpty ? c.availabilityDays.first : 'Mon')}, 4:30 PM',
+          'about': c.bio ?? 'Professional counseling support.',
+        };
+      }).toList();
 
   List<Map<String, dynamic>> get _filteredCounselors {
     final String query = _searchController.text.trim().toLowerCase();
@@ -88,8 +70,26 @@ class _CounselingScreenState extends State<CounselingScreen> {
     }).toList();
   }
 
-  Future<void> _callCounselor(String contact) async {
+  Future<void> _callCounselor(String contact, {bool emergency = false}) async {
     final Uri callUri = Uri(scheme: 'tel', path: contact.replaceAll(' ', ''));
+    try {
+      await FirebaseService.instance.logCounselorCall(
+        contact: contact,
+        source: emergency
+            ? 'mother_counseling_emergency_call'
+            : 'mother_counseling_call',
+        isEmergency: emergency,
+      );
+    } catch (_) {
+      // Logging should not block dialing.
+    }
+    if (emergency) {
+      await FirebaseService.instance.logEmergencyCall(
+        helpline: contact,
+        source: 'mother_counseling_quick_help',
+        outcome: 'Dial requested',
+      );
+    }
     if (await canLaunchUrl(callUri)) {
       await launchUrl(callUri);
       return;
@@ -99,16 +99,21 @@ class _CounselingScreenState extends State<CounselingScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _screenTabController = TabController(length: 2, vsync: this);
+    FirebaseService.instance.ensureSharedCounselorDirectorySeed();
+  }
+
+  @override
   void dispose() {
+    _screenTabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final int availableNow = _counselors
-        .where((c) => (c['status'] as String) == 'Available Now')
-        .length;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Counseling Support'),
@@ -123,127 +128,408 @@ class _CounselingScreenState extends State<CounselingScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _statCard(
-                    'Available Now',
-                    '$availableNow Counselors',
-                    NavJeevanColors.successGreen,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _statCard(
-                    'Avg Wait',
-                    '18 mins',
-                    NavJeevanColors.warningOrange,
-                  ),
-                ),
+      body: Column(
+        children: [
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TabBar(
+              controller: _screenTabController,
+              indicatorColor: NavJeevanColors.primaryRose,
+              labelColor: NavJeevanColors.primaryRose,
+              unselectedLabelColor: NavJeevanColors.textSoft,
+              tabs: const [
+                Tab(text: 'Overview'),
+                Tab(text: 'History'),
               ],
             ),
-            const SizedBox(height: 16),
-            // Assigned Counselor Section with Firebase Integration
-            _buildAssignedCounselorSection(context),
-            const SizedBox(height: 20),
-            Text(
-              'Find More Support',
-              style: NavJeevanTextStyles.headlineMedium.copyWith(fontSize: 22),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _screenTabController,
+              children: [
+                _buildOverviewTab(context),
+                _buildMotherCounselingHistoryTab(context),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _searchController,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: 'Search by counselor or specialty',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: NavJeevanColors.petalLight,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemBuilder: (context, index) {
-                  final String mode = _modes[index];
-                  final bool selected = mode == _selectedMode;
-                  return ChoiceChip(
-                    label: Text(mode),
-                    selected: selected,
-                    onSelected: (_) {
-                      setState(() {
-                        _selectedMode = mode;
-                      });
-                    },
-                    selectedColor: NavJeevanColors.blush,
-                    labelStyle: TextStyle(
-                      color: selected
-                          ? NavJeevanColors.primaryRose
-                          : NavJeevanColors.textSoft,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    side: BorderSide(
-                      color: selected
-                          ? NavJeevanColors.primaryRose
-                          : NavJeevanColors.borderColor,
-                    ),
-                  );
-                },
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemCount: _modes.length,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Recommended Counselors',
-              style: NavJeevanTextStyles.headlineMedium.copyWith(fontSize: 22),
-            ),
-            const SizedBox(height: 12),
-            if (_filteredCounselors.isEmpty)
-              _emptyState()
-            else
-              ..._filteredCounselors.map(
-                (c) => _buildCounselorCard(c, context),
-              ),
-            const SizedBox(height: 20),
-            Text(
-              'Upcoming Sessions',
-              style: NavJeevanTextStyles.headlineMedium.copyWith(fontSize: 22),
-            ),
-            const SizedBox(height: 12),
-            _buildSessionCard(
-              'Dr. Sarah Miller',
-              'Video Consultation',
-              'Tomorrow, 10:00 AM',
-              'Starts in 18h 42m',
-              Colors.blue,
-            ),
-            const SizedBox(height: 12),
-            _buildSessionCard(
-              'Maya Thompson',
-              'Check-in Session',
-              'Friday, Oct 25, 2:30 PM',
-              null,
-              NavJeevanColors.primaryRose,
-            ),
-            const SizedBox(height: 16),
-            _instantSupportCard(),
-          ],
-        ),
+          ),
+        ],
       ),
       bottomNavigationBar: _buildBottomNav(context),
     );
+  }
+
+  Widget _buildOverviewTab(BuildContext context) {
+    final int availableNow = _counselors
+        .where((c) => (c['status'] as String) == 'Available Now')
+        .length;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _statCard(
+                  'Available Now',
+                  '$availableNow Counselors',
+                  NavJeevanColors.successGreen,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _statCard(
+                  'Avg Wait',
+                  '18 mins',
+                  NavJeevanColors.warningOrange,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildAssignedCounselorSection(context),
+          const SizedBox(height: 20),
+          Text(
+            'Find More Support',
+            style: NavJeevanTextStyles.headlineMedium.copyWith(fontSize: 22),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _searchController,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: 'Search by counselor or specialty',
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: NavJeevanColors.petalLight,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 40,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (context, index) {
+                final String mode = _modes[index];
+                final bool selected = mode == _selectedMode;
+                return ChoiceChip(
+                  label: Text(mode),
+                  selected: selected,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedMode = mode;
+                    });
+                  },
+                  selectedColor: NavJeevanColors.blush,
+                  labelStyle: TextStyle(
+                    color: selected
+                        ? NavJeevanColors.primaryRose
+                        : NavJeevanColors.textSoft,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  side: BorderSide(
+                    color: selected
+                        ? NavJeevanColors.primaryRose
+                        : NavJeevanColors.borderColor,
+                  ),
+                );
+              },
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemCount: _modes.length,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Recommended Counselors',
+            style: NavJeevanTextStyles.headlineMedium.copyWith(fontSize: 22),
+          ),
+          const SizedBox(height: 12),
+          if (_filteredCounselors.isEmpty)
+            _emptyState()
+          else
+            ..._filteredCounselors.map(
+              (c) => _buildCounselorCard(c, context),
+            ),
+          const SizedBox(height: 20),
+          Text(
+            'Upcoming Sessions',
+            style: NavJeevanTextStyles.headlineMedium.copyWith(fontSize: 22),
+          ),
+          const SizedBox(height: 12),
+          _buildSessionCard(
+            'Dr. Sarah Miller',
+            'Video Consultation',
+            'Tomorrow, 10:00 AM',
+            'Starts in 18h 42m',
+            Colors.blue,
+          ),
+          const SizedBox(height: 12),
+          _buildSessionCard(
+            'Maya Thompson',
+            'Check-in Session',
+            'Friday, Oct 25, 2:30 PM',
+            null,
+            NavJeevanColors.primaryRose,
+          ),
+          const SizedBox(height: 16),
+          _instantSupportCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMotherCounselingHistoryTab(BuildContext context) {
+    final userId = context.read<AuthProvider>().user?.uid;
+    if (userId == null) {
+      return Center(
+        child: Text(
+          'Login required to view counseling history.',
+          style: NavJeevanTextStyles.bodySmall,
+        ),
+      );
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseService.instance.watchUserAssignments(userId),
+      builder: (context, assignmentSnapshot) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseService.instance.watchCurrentUserCounselingBookings(),
+          builder: (context, bookingSnapshot) {
+            final entries = <Map<String, dynamic>>[];
+
+            final assignmentDocs = assignmentSnapshot.data?.docs ?? [];
+            for (final doc in assignmentDocs) {
+              final data = doc.data() as Map<String, dynamic>;
+              final history = (data['history'] as List<dynamic>? ?? const <dynamic>[])
+                  .map((entry) => Map<String, dynamic>.from(entry as Map<String, dynamic>))
+                  .toList();
+              final counselorName = (data['counselorName'] ?? 'Counselor').toString();
+              final status = (data['status'] ?? 'Assigned').toString();
+              if (history.isEmpty) {
+                entries.add({
+                  'title': 'Counselor assigned',
+                  'subtitle': counselorName,
+                  'status': status,
+                  'time': data['assignedAt'],
+                });
+              } else {
+                for (final item in history) {
+                  entries.add({
+                    'title': item['message'] ?? 'Assignment update',
+                    'subtitle': counselorName,
+                    'status': item['status'] ?? status,
+                    'time': item['createdAt'],
+                  });
+                }
+              }
+            }
+
+            final bookingDocs = bookingSnapshot.data?.docs ?? [];
+            for (final doc in bookingDocs) {
+              final data = doc.data() as Map<String, dynamic>;
+              entries.add({
+                'title': 'Session booking ${(data['status'] ?? 'Requested').toString()}',
+                'subtitle': '${(data['counselorName'] ?? 'Counselor').toString()} • ${(data['slot'] ?? '--').toString()}',
+                'status': (data['status'] ?? 'Requested').toString(),
+                'time': data['updatedAt'] ?? data['createdAt'],
+              });
+            }
+
+            entries.sort((a, b) {
+              final aTs = a['time'];
+              final bTs = b['time'];
+              if (aTs is! Timestamp && bTs is! Timestamp) return 0;
+              if (aTs is! Timestamp) return 1;
+              if (bTs is! Timestamp) return -1;
+              return bTs.compareTo(aTs);
+            });
+
+            final filteredEntries = _selectedHistoryFilter == 'All'
+                ? entries
+                : entries
+                    .where((entry) =>
+                        (entry['status'] ?? '').toString() ==
+                        _selectedHistoryFilter)
+                    .toList();
+
+            if (entries.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    'No counseling records yet. Your assignments and bookings will appear here.',
+                    style: NavJeevanTextStyles.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  color: Colors.white,
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        'All',
+                        'Accepted',
+                        'Scheduled',
+                        'In Session',
+                        'Completed',
+                        'Declined',
+                      ].map((filter) {
+                        final selected = _selectedHistoryFilter == filter;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(filter),
+                            selected: selected,
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedHistoryFilter = filter;
+                              });
+                            },
+                            selectedColor: NavJeevanColors.blush,
+                            backgroundColor: NavJeevanColors.petalLight,
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              color: selected
+                                  ? NavJeevanColors.primaryRose
+                                  : NavJeevanColors.textSoft,
+                              fontWeight:
+                                  selected ? FontWeight.w700 : FontWeight.w500,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: filteredEntries.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Text(
+                              'No entries for "$_selectedHistoryFilter".',
+                              style: NavJeevanTextStyles.bodySmall,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                          itemCount: filteredEntries.length,
+                          itemBuilder: (context, index) {
+                            final entry = filteredEntries[index];
+                final status = (entry['status'] ?? 'Updated').toString();
+                final time = entry['time'];
+                final timestampText = time is Timestamp
+                    ? _formatHistoryDateTime(time.toDate())
+                    : '--';
+
+                Color statusColor = NavJeevanColors.textSoft;
+                if (status == 'Accepted') {
+                  statusColor = NavJeevanColors.successGreen;
+                } else if (status == 'Scheduled') {
+                  statusColor = NavJeevanColors.warningOrange;
+                } else if (status == 'In Session') {
+                  statusColor = NavJeevanColors.warningOrange;
+                } else if (status == 'Completed') {
+                  statusColor = NavJeevanColors.primaryRose;
+                } else if (status == 'Declined') {
+                  statusColor = NavJeevanColors.deepRose;
+                }
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: NavJeevanColors.borderColor),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        margin: const EdgeInsets.only(top: 6),
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              (entry['title'] ?? 'Update').toString(),
+                              style: NavJeevanTextStyles.titleMedium.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              (entry['subtitle'] ?? '').toString(),
+                              style: NavJeevanTextStyles.bodySmall,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$status • $timestampText',
+                              style: NavJeevanTextStyles.bodySmall.copyWith(
+                                color: statusColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _formatHistoryDateTime(DateTime dt) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+    final minute = dt.minute.toString().padLeft(2, '0');
+    final meridian = dt.hour >= 12 ? 'PM' : 'AM';
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year}, $hour:$minute $meridian';
   }
 
   Widget _statCard(String title, String value, Color color) {
@@ -341,6 +627,16 @@ class _CounselingScreenState extends State<CounselingScreen> {
         final counselorEmail = assignment['counselorEmail'] as String?;
         final counselorName =
             assignment['counselorName'] as String? ?? 'Assigned Counselor';
+        final assignmentStatus =
+          (assignment['status'] ?? 'Requested').toString();
+        final canBookSession = assignmentStatus == 'Accepted' ||
+            assignmentStatus == 'Scheduled' ||
+            assignmentStatus == 'In Session' ||
+            assignmentStatus == 'Completed';
+        final assignedSlot = (assignment['slot'] ?? '').toString();
+        final history = (assignment['history'] as List<dynamic>? ?? const <dynamic>[])
+          .map((entry) => Map<String, dynamic>.from(entry as Map<String, dynamic>))
+          .toList();
 
         final counselor = DummyAgencyData.agencyCounsellors.firstWhere(
           (item) => item.email == counselorEmail,
@@ -409,6 +705,52 @@ class _CounselingScreenState extends State<CounselingScreen> {
                 ],
               ),
               const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: NavJeevanColors.primaryRose.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      'Status: $assignmentStatus',
+                      style: NavJeevanTextStyles.bodySmall.copyWith(
+                        color: NavJeevanColors.primaryRose,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  if (assignedSlot.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: NavJeevanColors.petalLight,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'Slot: $assignedSlot',
+                        style: NavJeevanTextStyles.bodySmall.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              if (history.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Latest update: ${(history.first['message'] ?? 'No update').toString()}',
+                  style: NavJeevanTextStyles.bodySmall,
+                ),
+              ],
+              const SizedBox(height: 10),
               Row(
                 children: [
                   if (counselor.phone != null)
@@ -422,37 +764,48 @@ class _CounselingScreenState extends State<CounselingScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        context.push(
-                          NavJeevanRoutes.motherCounselingBooking,
-                          extra: {
-                            'id': 'assigned_${counselor.email ?? 'na'}',
-                            'name': counselorName,
-                            'specialty': counselor.specialty,
-                            'status': 'Assigned',
-                            'statusColor': NavJeevanColors.primaryRose,
-                            'mode': 'Video',
-                            'languages': (counselor.languages ?? []).join(', '),
-                            'experience':
-                                '${counselor.yearsExperience ?? 0} years',
-                            'rating': counselor.rating ?? 4.5,
-                            'fee': '₹600/session',
-                            'contact': counselor.phone ?? '',
-                            'nextSlot': 'Today, 5:30 PM',
-                            'about': counselor.bio ?? 'Professional counselor',
-                          },
-                        );
-                      },
+                      onPressed: canBookSession
+                          ? () {
+                              context.push(
+                                NavJeevanRoutes.motherCounselingBooking,
+                                extra: {
+                                  'id': 'assigned_${counselor.email ?? 'na'}',
+                                  'name': counselorName,
+                                  'specialty': counselor.specialty,
+                                  'status': 'Assigned',
+                                  'statusColor': NavJeevanColors.primaryRose,
+                                  'mode': 'Video',
+                                  'languages': (counselor.languages ?? []).join(', '),
+                                  'experience':
+                                      '${counselor.yearsExperience ?? 0} years',
+                                  'rating': counselor.rating ?? 4.5,
+                                  'fee': '₹600/session',
+                                  'contact': counselor.phone ?? '',
+                                  'nextSlot': 'Today, 5:30 PM',
+                                  'about': counselor.bio ?? 'Professional counselor',
+                                },
+                              );
+                            }
+                          : null,
                       icon: const Icon(Icons.calendar_month, size: 16),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: NavJeevanColors.primaryRose,
                         foregroundColor: Colors.white,
                       ),
-                      label: const Text('Book Session'),
+                      label: Text(canBookSession
+                          ? 'Book Session'
+                          : 'Await NGO Acceptance'),
                     ),
                   ),
                 ],
               ),
+              if (!canBookSession) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Booking unlocks after NGO accepts this counseling request.',
+                  style: NavJeevanTextStyles.bodySmall,
+                ),
+              ],
             ],
           ),
         );
@@ -559,17 +912,26 @@ class _CounselingScreenState extends State<CounselingScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
-                          context.push(
-                            NavJeevanRoutes.motherCounselingBooking,
-                            extra: counselor,
+                        onPressed: () async {
+                          await FirebaseService.instance.submitCounselingSupportRequest(
+                            requestKind: 'Counseling Session Request',
+                            notes:
+                                'Requested counselor: ${(counselor['name'] ?? 'Counselor').toString()}',
+                          );
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Request sent. Booking will unlock after NGO acceptance.',
+                              ),
+                            ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: NavJeevanColors.primaryRose,
                           foregroundColor: Colors.white,
                         ),
-                        child: const Text('View & Book'),
+                        child: const Text('Request Session'),
                       ),
                     ),
                   ],
@@ -666,7 +1028,7 @@ class _CounselingScreenState extends State<CounselingScreen> {
                 subtitle: const Text('Average response: under 2 minutes'),
                 onTap: () {
                   Navigator.pop(context);
-                  _callCounselor('+91 8047121098');
+                  _callCounselor('+91 8047121098', emergency: true);
                 },
               ),
               ListTile(
@@ -677,8 +1039,13 @@ class _CounselingScreenState extends State<CounselingScreen> {
                 ),
                 title: const Text('Start Audio Counseling Now'),
                 subtitle: const Text('Queue position is assigned instantly'),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
+                  await FirebaseService.instance.submitCounselingSupportRequest(
+                    requestKind: 'Instant Audio Counseling',
+                    notes: 'Requested from quick help sheet',
+                  );
+                  if (!mounted) return;
                   ScaffoldMessenger.of(this.context).showSnackBar(
                     const SnackBar(
                       content: Text(
@@ -698,8 +1065,13 @@ class _CounselingScreenState extends State<CounselingScreen> {
                 subtitle: const Text(
                   'A counselor will call your registered number',
                 ),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
+                  await FirebaseService.instance.submitCounselingSupportRequest(
+                    requestKind: 'Callback in 5 Minutes',
+                    notes: 'Requested from quick help sheet',
+                  );
+                  if (!mounted) return;
                   ScaffoldMessenger.of(this.context).showSnackBar(
                     const SnackBar(
                       content: Text('Callback scheduled in 5 minutes.'),

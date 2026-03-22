@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/dummy_agency_data.dart';
 import '../../core/constants/route_names.dart';
@@ -20,6 +21,21 @@ class _AgencyCounselorManagementScreenState
       AgencyNotificationCenter.instance;
   String _tab = 'Active';
 
+  String _deriveCounselorCategory(String specialty) {
+    final value = specialty.toLowerCase();
+    if (value.contains('legal') || value.contains('law')) return 'legal';
+    if (value.contains('medical') || value.contains('maternal') || value.contains('health')) {
+      return 'medical';
+    }
+    return 'general';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    FirebaseService.instance.ensureSharedCounselorDirectorySeed();
+  }
+
   Color _availabilityIndicatorColor(Counsellor counselor) {
     if (counselor.status == 'on_leave') return const Color(0xFF3B82F6);
     if (counselor.status == 'full') return const Color(0xFFF59E0B);
@@ -37,6 +53,20 @@ class _AgencyCounselorManagementScreenState
     FirebaseService.instance.updateCounselorStatus(
       counselorEmail: counselor.email ?? 'unknown@email.com',
       status: newStatus,
+    );
+    FirebaseService.instance.upsertCounselorDirectoryEntry(
+      counselorId: (counselor.email ?? counselor.name)
+          .replaceAll(' ', '_')
+          .toLowerCase(),
+      name: counselor.name,
+      specialty: counselor.specialty,
+      status: newStatus,
+      category: _deriveCounselorCategory(counselor.specialty),
+      email: counselor.email,
+      phone: counselor.phone,
+      activeCases: counselor.activeCases,
+      maxCases: counselor.maxCases,
+      image: counselor.image,
     );
 
     _notifications.push(
@@ -339,76 +369,129 @@ class _AgencyCounselorManagementScreenState
 
   @override
   Widget build(BuildContext context) {
-    final counselors =
-        DummyAgencyData.agencyCounsellors
-            .where(
-              (c) => _tab == 'Active'
-                  ? c.status == 'available'
-                  : _tab == 'Full'
-                  ? c.status == 'full'
-                  : _tab == 'On Leave'
-                  ? c.status == 'on_leave'
-                  : false,
-            )
-            .toList()
-          ..sort((a, b) {
-            final aLoad = a.activeCases / a.maxCases;
-            final bLoad = b.activeCases / b.maxCases;
-            return aLoad.compareTo(bLoad);
-          });
-
     return Scaffold(
       backgroundColor: ParentThemeColors.backgroundLight,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildTabs(),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _buildStats(),
-                  const SizedBox(height: 14),
-                  const Text(
-                    'AVAILABLE PROFESSIONALS',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1,
-                      color: ParentThemeColors.textMid,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  if (counselors.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: ParentThemeColors.pureWhite,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: ParentThemeColors.borderColor.withValues(
-                            alpha: 0.4,
-                          ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseService.instance.watchCounselorDirectory(),
+        builder: (context, counselorSnap) {
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseService.instance.watchAllCounselingBookings(),
+            builder: (context, bookingSnap) {
+              return StreamBuilder<QuerySnapshot>(
+                stream: FirebaseService.instance.watchAllCounselingRequests(),
+                builder: (context, requestSnap) {
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseService.instance.watchAllCounselorAssignments(),
+                    builder: (context, assignmentSnap) {
+                      final counselorDocs = counselorSnap.data?.docs ?? [];
+                      final allCounselors = counselorDocs
+                          .map((doc) => _counselorFromMap(doc.data() as Map<String, dynamic>))
+                          .toList();
+                      final counselors = allCounselors
+                          .where(
+                            (c) => _tab == 'Active'
+                                ? c.status == 'available'
+                                : _tab == 'Full'
+                                    ? c.status == 'full'
+                                    : _tab == 'On Leave'
+                                        ? c.status == 'on_leave'
+                                        : false,
+                          )
+                          .toList()
+                        ..sort((a, b) {
+                          final aLoad = a.maxCases == 0 ? 0 : a.activeCases / a.maxCases;
+                          final bLoad = b.maxCases == 0 ? 0 : b.activeCases / b.maxCases;
+                          return aLoad.compareTo(bLoad);
+                        });
+
+                      final bookingDocs = bookingSnap.data?.docs ?? [];
+                      final requestDocs = requestSnap.data?.docs ?? [];
+                      final assignmentDocs = assignmentSnap.data?.docs ?? [];
+
+                      return SafeArea(
+                        child: Column(
+                          children: [
+                            _buildHeader(),
+                            _buildTabs(),
+                            Expanded(
+                              child: ListView(
+                                padding: const EdgeInsets.all(16),
+                                children: [
+                                  _buildStats(
+                                    allCounselors: allCounselors,
+                                    bookingDocs: bookingDocs,
+                                    requestDocs: requestDocs,
+                                    assignmentDocs: assignmentDocs,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  const Text(
+                                    'AVAILABLE PROFESSIONALS',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1,
+                                      color: ParentThemeColors.textMid,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  if (counselors.isEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: ParentThemeColors.pureWhite,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: ParentThemeColors.borderColor.withValues(
+                                            alpha: 0.4,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'No counselors in $_tab status.',
+                                        style: const TextStyle(
+                                          color: ParentThemeColors.textMid,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    ...counselors.map(_buildCounselorCard),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      child: Text(
-                        'No counselors in $_tab status.',
-                        style: const TextStyle(
-                          color: ParentThemeColors.textMid,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    )
-                  else
-                    ...counselors.map(_buildCounselorCard),
-                ],
-              ),
-            ),
-          ],
-        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          );
+        },
       ),
       bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Counsellor _counselorFromMap(Map<String, dynamic> data) {
+    return Counsellor(
+      name: (data['name'] ?? 'Counselor').toString(),
+      specialty: (data['specialty'] ?? 'Support').toString(),
+      availabilityDays: const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      activeCases: int.tryParse((data['activeCases'] ?? 0).toString()) ?? 0,
+      maxCases: int.tryParse((data['maxCases'] ?? 10).toString()) ?? 10,
+      status: (data['status'] ?? 'available').toString(),
+      image: (data['image'] ?? 'https://via.placeholder.com/150').toString(),
+      action: 'manage',
+      email: data['email']?.toString(),
+      phone: data['phone']?.toString(),
+      qualification: data['qualification']?.toString(),
+      rating: double.tryParse((data['rating'] ?? 4.5).toString()),
+      yearsExperience: int.tryParse((data['yearsExperience'] ?? 5).toString()),
+      certifications: const ['Verified'],
+      bio: data['bio']?.toString() ?? 'Professional counselor listed in Firestore.',
+      languages: const ['English'],
     );
   }
 
@@ -489,80 +572,71 @@ class _AgencyCounselorManagementScreenState
     );
   }
 
-  Widget _buildStats() {
-    final active = DummyAgencyData.agencyCounsellors
-        .where((c) => c.status == 'available')
-        .length;
-    final avgLoad =
-        DummyAgencyData.agencyCounsellors
-            .map((c) => c.activeCases / c.maxCases)
-            .reduce((a, b) => a + b) /
-        DummyAgencyData.agencyCounsellors.length;
+  Widget _buildStats({
+    required List<Counsellor> allCounselors,
+    required List<QueryDocumentSnapshot> bookingDocs,
+    required List<QueryDocumentSnapshot> requestDocs,
+    required List<QueryDocumentSnapshot> assignmentDocs,
+  }) {
+    final active = allCounselors.where((c) => c.status == 'available').length;
+    final avgLoad = allCounselors.isEmpty
+        ? 0.0
+        : allCounselors
+                .map((c) => c.maxCases == 0 ? 0.0 : c.activeCases / c.maxCases)
+                .reduce((a, b) => a + b) /
+            allCounselors.length;
+    final requestedBookings = bookingDocs.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return (data['status'] ?? 'Requested') == 'Requested';
+    }).length;
+    final quickRequests = requestDocs.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return (data['status'] ?? 'Requested') == 'Requested';
+    }).length;
+    final activeAssignments = assignmentDocs.length;
 
-    return Row(
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
       children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0F2FE),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0x330EA5E9)),
-            ),
-            child: Column(
-              children: [
-                const Text(
-                  'TOTAL ACTIVE',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0EA5E9),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$active',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFCE7F3),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0x33DB2777)),
-            ),
-            child: Column(
-              children: [
-                const Text(
-                  'AVG CASELOAD',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFDB2777),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${(avgLoad * 100).toStringAsFixed(0)}%',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        _statBox('TOTAL ACTIVE', '$active', const Color(0xFFE0F2FE), const Color(0xFF0EA5E9)),
+        _statBox('AVG CASELOAD', '${(avgLoad * 100).toStringAsFixed(0)}%', const Color(0xFFFCE7F3), const Color(0xFFDB2777)),
+        _statBox('BOOKING REQS', '$requestedBookings', const Color(0xFFEDE9FE), const Color(0xFF7C3AED)),
+        _statBox('QUICK SUPPORT', '$quickRequests', const Color(0xFFECFDF5), const Color(0xFF059669)),
+        _statBox('ASSIGNMENTS', '$activeAssignments', const Color(0xFFFFF7ED), const Color(0xFFEA580C)),
       ],
+    );
+  }
+
+  Widget _statBox(String label, String value, Color bg, Color fg) {
+    return Container(
+      width: 150,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: fg.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: fg,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

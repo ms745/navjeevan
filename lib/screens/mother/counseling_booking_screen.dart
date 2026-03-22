@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/constants/route_names.dart';
+import '../../core/services/firebase_service.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/widgets/error_popup.dart';
@@ -49,9 +51,33 @@ class _CounselingBookingScreenState extends State<CounselingBookingScreen> {
     });
   }
 
-  void _confirmBooking() {
+  Future<void> _confirmBooking() async {
     if (_selectedDate == null || _selectedSlot == null) {
       showErrorBottomPopup(context, 'Please select date and time slot first.');
+      return;
+    }
+
+    final Map<String, dynamic> counselor =
+        widget.counselor ??
+        {
+          'id': 'manual_counselor',
+          'name': 'Counselor',
+          'specialty': 'Support Specialist',
+        };
+
+    try {
+      await FirebaseService.instance.createCounselingBooking(
+        counselorId: (counselor['id'] ?? counselor['name'] ?? 'unknown')
+            .toString(),
+        counselorName: (counselor['name'] ?? 'Counselor').toString(),
+        sessionMode: _selectedMode,
+        sessionDate: _selectedDate!,
+        slot: _selectedSlot!,
+        notes: _notesController.text,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      showErrorBottomPopup(context, 'Booking failed: $error');
       return;
     }
 
@@ -81,6 +107,14 @@ class _CounselingBookingScreenState extends State<CounselingBookingScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'My Profile',
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => context.push(NavJeevanRoutes.motherProfile),
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../core/theme/colors.dart';
@@ -14,27 +16,11 @@ class AnalyticsTab extends StatefulWidget {
 
 class _AnalyticsTabState extends State<AnalyticsTab> {
   String _selectedPeriod = '30D';
-  
+  GoogleMapController? _mapController;
+  MapType _mapType = MapType.normal;
+
   // Pune center coordinates
   final LatLng _puneCenter = const LatLng(18.5204, 73.8567);
-
-  final List<_AdminTask> _tasks = [
-    _AdminTask(
-      name: 'Sharma Family',
-      details: 'Baner • 2 hours ago',
-      status: 'PENDING',
-    ),
-    _AdminTask(
-      name: 'Deshpande Family',
-      details: 'Kothrud • 5 hours ago',
-      status: 'VERIFIED',
-    ),
-    _AdminTask(
-      name: 'Kulkarni Family',
-      details: 'Wakad • 1 day ago',
-      status: 'IN REVIEW',
-    ),
-  ];
 
   final Map<String, LatLng> _regionCoords = {
     'Pune Central': const LatLng(18.5204, 73.8567),
@@ -48,16 +34,23 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
     'Baner': const LatLng(18.5590, 73.7797),
   };
 
-  void _cycleTaskStatus(_AdminTask task) {
-    setState(() {
-      if (task.status == 'PENDING') {
-        task.status = 'IN REVIEW';
-      } else if (task.status == 'IN REVIEW') {
-        task.status = 'VERIFIED';
-      } else {
-        task.status = 'PENDING';
-      }
-    });
+  Future<void> _zoomMapBy(double delta) async {
+    final controller = _mapController;
+    if (controller == null) return;
+    final zoom = await controller.getZoomLevel();
+    await controller.animateCamera(
+      CameraUpdate.zoomTo((zoom + delta).clamp(5.0, 18.0)),
+    );
+  }
+
+  Future<void> _resetMapView() async {
+    final controller = _mapController;
+    if (controller == null) return;
+    await controller.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: _puneCenter, zoom: 11.0),
+      ),
+    );
   }
 
   @override
@@ -68,99 +61,199 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
         return StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance.collection('adoptive_families').snapshots(),
           builder: (context, familySnap) {
-            final motherDocs = motherSnap.data?.docs ?? [];
-            final familyDocs = familySnap.data?.docs ?? [];
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseService.instance.watchAllCounselingBookings(),
+              builder: (context, bookingSnap) {
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseService.instance.watchAllCounselingRequests(),
+                  builder: (context, requestSnap) {
+                    return StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseService.instance.watchAllCounselorAssignments(),
+                      builder: (context, assignmentSnap) {
+                        final motherDocs = motherSnap.data?.docs ?? [];
+                        final familyDocs = familySnap.data?.docs ?? [];
+                        final bookingDocs = bookingSnap.data?.docs ?? [];
+                        final counselingRequestDocs = requestSnap.data?.docs ?? [];
+                        final assignmentDocs = assignmentSnap.data?.docs ?? [];
 
-            // Process counts
-            final totalRequests = motherDocs.length;
-            final verifiedFamilies = familyDocs.where((d) => (d.data() as Map)['adoptionStatus'] == 'Verified').length;
-            final childrenPlaced = familyDocs.where((d) => (d.data() as Map)['adoptionStatus'] == 'Placed').length;
+                        // Process counts
+                        final totalRequests = motherDocs.length;
+                        final activeRequests = motherDocs.where((d) {
+                          final data = d.data() as Map<String, dynamic>;
+                          return (data['status'] ?? 'Active') == 'Active';
+                        }).length;
+                        final inProcessRequests = motherDocs.where((d) {
+                          final data = d.data() as Map<String, dynamic>;
+                          return (data['status'] ?? '') == 'In Process';
+                        }).length;
+                        final acceptedRequests = motherDocs.where((d) {
+                          final data = d.data() as Map<String, dynamic>;
+                          return (data['status'] ?? '') == 'Accepted';
+                        }).length;
+                        final declinedRequests = motherDocs.where((d) {
+                          final data = d.data() as Map<String, dynamic>;
+                          return (data['status'] ?? '') == 'Declined';
+                        }).length;
+                        final verifiedFamilies = familyDocs.where((d) => (d.data() as Map)['adoptionStatus'] == 'Verified').length;
+                        final childrenPlaced = familyDocs.where((d) => (d.data() as Map)['adoptionStatus'] == 'Child Assigned').length;
+                        final requestedBookings = bookingDocs.where((d) {
+                          final data = d.data() as Map<String, dynamic>;
+                          return (data['status'] ?? 'Requested') == 'Requested';
+                        }).length;
+                        final confirmedBookings = bookingDocs.where((d) {
+                          final data = d.data() as Map<String, dynamic>;
+                          return (data['status'] ?? '') == 'Confirmed';
+                        }).length;
+                        final quickSupportRequests = counselingRequestDocs.where((d) {
+                          final data = d.data() as Map<String, dynamic>;
+                          return (data['status'] ?? 'Requested') == 'Requested';
+                        }).length;
+                        final activeAssignments = assignmentDocs.length;
 
-            // Regional data for chart
-            final regionsForChart = ['Hadapsar', 'Pune Central', 'Aundh', 'Pimpri', 'Viman Nagar', 'Hinjewadi'];
-            final regionalCounts = {for (var r in regionsForChart) r: 0};
+                        // Regional data for chart
+                        final regionsForChart = ['Hadapsar', 'Pune Central', 'Aundh', 'Pimpri', 'Viman Nagar', 'Hinjewadi'];
+                        final regionalCounts = {for (var r in regionsForChart) r: 0};
             
-            // Markers setup
-            final Set<Marker> markers = {};
-            final Map<String, int> regionHeat = {};
+                        // Markers setup
+                        final Set<Marker> markers = {};
+                        final Map<String, int> regionHeat = {};
 
-            for (var doc in motherDocs) {
-              final reg = (doc.data() as Map)['region'] ?? 'Unknown';
-              if (regionalCounts.containsKey(reg)) {
-                regionalCounts[reg] = regionalCounts[reg]! + 1;
-              }
-              regionHeat[reg] = (regionHeat[reg] ?? 0) + 1;
-            }
-            
-            // Create markers based on regional activity
-            regionHeat.forEach((region, countValue) {
-              if (_regionCoords.containsKey(region)) {
-                markers.add(
-                  Marker(
-                    markerId: MarkerId(region),
-                    position: _regionCoords[region]!,
-                    infoWindow: InfoWindow(
-                      title: region,
-                      snippet: '$countValue total request(s) in this area',
-                    ),
-                    icon: BitmapDescriptor.defaultMarkerWithHue(
-                      countValue > 5 ? BitmapDescriptor.hueRed : BitmapDescriptor.hueOrange,
-                    ),
-                  ),
-                );
-              }
-            });
-
-            final maxCount = regionalCounts.values.fold(1, (max, val) => val > max ? val : max);
-            final bars = regionsForChart.map((r) => regionalCounts[r]! / maxCount).toList();
-
-            final liveData = {
-              'requests': totalRequests,
-              'requestsTrend': '+${motherDocs.length % 15}%',
-              'verified': verifiedFamilies,
-              'verifiedTrend': '+2%',
-              'placed': childrenPlaced,
-              'placedTrend': '+0%',
-              'regionalTotal': totalRequests,
-              'bars': bars,
-              'markers': markers,
-            };
-
-            return SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 100),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(context),
-                  _buildStatsGrid(liveData),
-                  _buildMapSection(markers),
-                  _buildRegionChart(liveData),
-                  _buildRecentTasks(context),
-                  const SizedBox(height: 24),
-                  Center(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        await FirebaseService.instance.seedInitialData();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Initial Data Seeded Successfully!')),
-                          );
+                        for (var doc in motherDocs) {
+                          final reg = (doc.data() as Map)['region'] ?? 'Unknown';
+                          if (regionalCounts.containsKey(reg)) {
+                            regionalCounts[reg] = regionalCounts[reg]! + 1;
+                          }
+                          regionHeat[reg] = (regionHeat[reg] ?? 0) + 1;
                         }
+            
+                        // Create markers based on regional activity
+                        regionHeat.forEach((region, countValue) {
+                          if (_regionCoords.containsKey(region)) {
+                            markers.add(
+                              Marker(
+                                markerId: MarkerId(region),
+                                position: _regionCoords[region]!,
+                                infoWindow: InfoWindow(
+                                  title: region,
+                                  snippet: '$countValue total request(s) in this area',
+                                ),
+                                icon: BitmapDescriptor.defaultMarkerWithHue(
+                                  countValue > 5 ? BitmapDescriptor.hueRed : BitmapDescriptor.hueOrange,
+                                ),
+                              ),
+                            );
+                          }
+                        });
+
+                        final maxCount = regionalCounts.values.fold(1, (max, val) => val > max ? val : max);
+                        final bars = regionsForChart.map((r) => regionalCounts[r]! / maxCount).toList();
+
+                        final liveData = {
+                          'requests': totalRequests,
+                          'requestsTrend': '+${motherDocs.length % 15}%',
+                          'activeRequests': activeRequests,
+                          'inProcessRequests': inProcessRequests,
+                          'acceptedRequests': acceptedRequests,
+                          'declinedRequests': declinedRequests,
+                          'verified': verifiedFamilies,
+                          'verifiedTrend': '+2%',
+                          'placed': childrenPlaced,
+                          'placedTrend': '+0%',
+                          'regionalTotal': totalRequests,
+                          'bars': bars,
+                          'markers': markers,
+                          'requestedBookings': requestedBookings,
+                          'confirmedBookings': confirmedBookings,
+                          'quickSupportRequests': quickSupportRequests,
+                          'activeAssignments': activeAssignments,
+                        };
+
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.only(bottom: 100),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildHeader(context),
+                              _buildStatsGrid(liveData),
+                              _buildRequestLifecycleSection(liveData),
+                              _buildCounselingOpsSection(liveData),
+                              _buildMapSection(markers),
+                              _buildRegionChart(liveData),
+                              _buildRecentTasks(context, motherDocs),
+                              const SizedBox(height: 24),
+                              Center(
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    await FirebaseService.instance.seedInitialData();
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Initial Data Seeded Successfully!')),
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(Icons.auto_awesome),
+                                  label: const Text('Seed Initial Data'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: NavJeevanColors.primaryRose,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
                       },
-                      icon: const Icon(Icons.auto_awesome),
-                      label: const Text('Seed Initial Data'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: NavJeevanColors.primaryRose,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                    );
+                  },
+                );
+              },
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildCounselingOpsSection(Map<String, dynamic> periodData) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: NavJeevanColors.pureWhite,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: NavJeevanColors.borderColor.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Counselor Operations',
+            style: NavJeevanTextStyles.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Live booking, support queue, and assignment metrics',
+            style: NavJeevanTextStyles.bodySmall.copyWith(
+              color: NavJeevanColors.textSoft,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _lifecycleChip('Booking Requests', periodData['requestedBookings'], Colors.deepPurple),
+              _lifecycleChip('Confirmed Sessions', periodData['confirmedBookings'], Colors.green),
+              _lifecycleChip('Quick Support Queue', periodData['quickSupportRequests'], Colors.teal),
+              _lifecycleChip('Active Assignments', periodData['activeAssignments'], Colors.indigo),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -268,9 +361,113 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
                 iconColor: NavJeevanColors.primaryRose,
                 width: width,
               ),
+              _buildStatCard(
+                title: 'Active Cases',
+                value: '${periodData['activeRequests']}',
+                trend: 'Live',
+                icon: Icons.pending_actions_rounded,
+                iconBg: Colors.orange.shade50,
+                iconColor: Colors.orange.shade700,
+                width: width,
+              ),
+              _buildStatCard(
+                title: 'In Process',
+                value: '${periodData['inProcessRequests']}',
+                trend: 'Live',
+                icon: Icons.sync_rounded,
+                iconBg: Colors.blue.shade50,
+                iconColor: Colors.blue.shade700,
+                width: width,
+              ),
+              _buildStatCard(
+                title: 'Accepted',
+                value: '${periodData['acceptedRequests']}',
+                trend: 'Live',
+                icon: Icons.check_circle_rounded,
+                iconBg: Colors.green.shade50,
+                iconColor: Colors.green.shade700,
+                width: width,
+              ),
+              _buildStatCard(
+                title: 'Declined',
+                value: '${periodData['declinedRequests']}',
+                trend: 'Live',
+                icon: Icons.cancel_rounded,
+                iconBg: Colors.red.shade50,
+                iconColor: Colors.red.shade700,
+                width: width,
+              ),
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildRequestLifecycleSection(Map<String, dynamic> periodData) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: NavJeevanColors.pureWhite,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: NavJeevanColors.borderColor.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Mother Request Lifecycle',
+            style: NavJeevanTextStyles.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Real-time operational distribution from Firestore',
+            style: NavJeevanTextStyles.bodySmall.copyWith(
+              color: NavJeevanColors.textSoft,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _lifecycleChip('Active', periodData['activeRequests'], Colors.orange),
+              _lifecycleChip('In Process', periodData['inProcessRequests'], Colors.blue),
+              _lifecycleChip('Accepted', periodData['acceptedRequests'], Colors.green),
+              _lifecycleChip('Declined', periodData['declinedRequests'], Colors.red),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _lifecycleChip(String label, Object? value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.circle, size: 10, color: color),
+          const SizedBox(width: 8),
+          Text(
+            '$label: $value',
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -376,28 +573,137 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
               fontWeight: FontWeight.bold,
             ),
           ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _mapStyleChip('Default', MapType.normal),
+              _mapStyleChip('Satellite', MapType.satellite),
+              _mapStyleChip('Terrain', MapType.terrain),
+              _mapStyleChip('Hybrid', MapType.hybrid),
+            ],
+          ),
           const SizedBox(height: 12),
-          Container(
-            height: 250,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: NavJeevanColors.borderColor.withValues(alpha: 0.5)),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: _puneCenter,
-                  zoom: 11.0,
+          Stack(
+            children: [
+              Container(
+                height: 250,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: NavJeevanColors.borderColor.withValues(alpha: 0.5),
+                  ),
                 ),
-                markers: markers,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled: false,
-                mapToolbarEnabled: false,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: _puneCenter,
+                      zoom: 11.0,
+                    ),
+                    onMapCreated: (controller) => _mapController = controller,
+                    mapType: _mapType,
+                    markers: markers,
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: true,
+                    zoomGesturesEnabled: true,
+                    scrollGesturesEnabled: true,
+                    rotateGesturesEnabled: true,
+                    tiltGesturesEnabled: true,
+                    compassEnabled: true,
+                    mapToolbarEnabled: false,
+                    minMaxZoomPreference: const MinMaxZoomPreference(5.0, 18.0),
+                    gestureRecognizers: {
+                      Factory<OneSequenceGestureRecognizer>(
+                        () => EagerGestureRecognizer(),
+                      ),
+                    },
+                  ),
+                ),
               ),
-            ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: Column(
+                  children: [
+                    _mapActionButton(
+                      icon: Icons.add,
+                      onPressed: () => _zoomMapBy(1),
+                    ),
+                    const SizedBox(height: 8),
+                    _mapActionButton(
+                      icon: Icons.remove,
+                      onPressed: () => _zoomMapBy(-1),
+                    ),
+                    const SizedBox(height: 8),
+                    _mapActionButton(
+                      icon: Icons.center_focus_strong_rounded,
+                      onPressed: _resetMapView,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _mapStyleChip(String label, MapType type) {
+    final selected = _mapType == type;
+    return InkWell(
+      onTap: () => setState(() => _mapType = type),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected
+              ? NavJeevanColors.primaryRose.withValues(alpha: 0.12)
+              : NavJeevanColors.pureWhite,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected
+                ? NavJeevanColors.primaryRose.withValues(alpha: 0.35)
+                : NavJeevanColors.borderColor.withValues(alpha: 0.4),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: selected
+                ? NavJeevanColors.primaryRose
+                : NavJeevanColors.textSoft,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mapActionButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: NavJeevanColors.pureWhite.withValues(alpha: 0.95),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: NavJeevanColors.borderColor.withValues(alpha: 0.4),
+            ),
+          ),
+          child: Icon(icon, size: 18, color: NavJeevanColors.textDark),
+        ),
       ),
     );
   }
@@ -546,7 +852,24 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
     );
   }
 
-  Widget _buildRecentTasks(BuildContext context) {
+  Widget _buildRecentTasks(
+    BuildContext context,
+    List<QueryDocumentSnapshot> motherDocs,
+  ) {
+    final recentTasks = motherDocs.take(5).map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      final region = (data['region'] ?? 'Unknown').toString();
+      final reasons = ((data['reasons'] as List?) ?? const []).join(', ');
+      final createdAt = data['createdAt'] as Timestamp?;
+      return _AdminTask(
+        id: doc.id,
+        name: reasons.isEmpty ? 'Mother Request' : reasons,
+        details:
+            '$region • ${createdAt != null ? _formatDate(createdAt.toDate()) : 'Recently'}',
+        status: (data['status'] ?? 'Active').toString(),
+      );
+    }).toList();
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -565,7 +888,7 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Recent Verification Tasks',
+                  'Recent Mother Request Tasks',
                   style: NavJeevanTextStyles.titleSmall.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -578,7 +901,7 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
                         return SafeArea(
                           child: ListView(
                             padding: const EdgeInsets.all(16),
-                            children: _tasks
+                            children: recentTasks
                                 .map(
                                   (task) => ListTile(
                                     title: Text(task.name),
@@ -610,13 +933,13 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
               ],
             ),
           ),
-          ..._tasks.asMap().entries.map((entry) {
+          ...recentTasks.asMap().entries.map((entry) {
             final index = entry.key;
             final task = entry.value;
             return Column(
               children: [
                 _buildTaskItem(task: task),
-                if (index != _tasks.length - 1) const Divider(height: 1),
+                  if (index != recentTasks.length - 1) const Divider(height: 1),
               ],
             );
           }),
@@ -628,9 +951,7 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
 
   Widget _buildTaskItem({required _AdminTask task}) {
     final statusColor = _taskStatusColor(task.status);
-    return InkWell(
-      onTap: () => _cycleTaskStatus(task),
-      child: Padding(
+    return Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
@@ -683,25 +1004,50 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Color _taskStatusColor(String status) {
     switch (status) {
-      case 'VERIFIED':
+      case 'Accepted':
         return NavJeevanColors.emerald;
-      case 'IN REVIEW':
+      case 'In Process':
         return Colors.blue;
+      case 'Declined':
+        return Colors.red;
       default:
         return Colors.amber;
     }
   }
+
+  String _formatDate(DateTime dt) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1]} ${dt.year}';
+  }
 }
 
 class _AdminTask {
-  _AdminTask({required this.name, required this.details, required this.status});
+  _AdminTask({
+    required this.id,
+    required this.name,
+    required this.details,
+    required this.status,
+  });
 
+  final String id;
   final String name;
   final String details;
   String status;

@@ -24,7 +24,7 @@ migrate_working_dir/
 #.vscode/
 
 details
-C:\Users\samruddhikhilari\Desktop\VIT\smile_please\antigravity_stich\NavJeevan\navjeevan_screens_designs
+/navjeevan_screens_designs
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -35,6 +35,8 @@ C:\Users\samruddhikhilari\Desktop\VIT\smile_please\antigravity_stich\NavJeevan\n
 .pub/
 /build/
 /coverage/
+
+COUNSELOR_ASSIGNMENT_SYSTEM.md
 
 # Symbolication related
 app.*.symbols
@@ -49,3 +51,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Cloudinary credentials (keep local, never commit)
+lib/core/cloudinary_config.dart

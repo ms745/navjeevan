@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/route_names.dart';
+import '../../core/services/firebase_service.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/widgets/logout_button.dart';
 import 'widgets/analytics_tab.dart';
 import 'widgets/verification_tab.dart';
 import 'widgets/ai_risk_tab.dart';
+import 'widgets/mother_requests_tab.dart';
 import 'widgets/reports_tab.dart';
+import 'widgets/child_assignments_tab.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -19,6 +22,12 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    FirebaseService.instance.ensureSharedCounselorDirectorySeed();
+  }
 
   void _navigateToHostTab(int index, {bool closeDrawer = true}) {
     if (!mounted) return;
@@ -32,16 +41,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   final List<Widget> _tabs = [
     const AnalyticsTab(),
+    const MotherRequestsTab(),
     const VerificationTab(),
     const AIRiskTab(),
     const ReportsTab(),
+    const ChildAssignmentsTab(),
   ];
 
   final List<String> _titles = [
     'Pune Admin Analytics',
+    'Mother Surrender Requests',
     'Family Verification',
     'AI Risk Prediction',
     'Reports & Compliance',
+    'Child Assignments',
   ];
 
   @override
@@ -131,19 +144,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               onTap: () => _navigateToHostTab(0),
             ),
             ListTile(
+              leading: const Icon(Icons.assignment_rounded),
+              title: const Text('Mother Requests'),
+              onTap: () => _navigateToHostTab(1),
+            ),
+            ListTile(
               leading: const Icon(Icons.verified_user_rounded),
               title: const Text('Family Verification'),
-              onTap: () => _navigateToHostTab(1),
+              onTap: () => _navigateToHostTab(2),
             ),
             ListTile(
               leading: const Icon(Icons.psychology_rounded),
               title: const Text('AI Risk Prediction'),
-              onTap: () => _navigateToHostTab(2),
+              onTap: () => _navigateToHostTab(3),
             ),
             ListTile(
               leading: const Icon(Icons.description_rounded),
               title: const Text('Reports & Compliance'),
-              onTap: () => _navigateToHostTab(3),
+              onTap: () => _navigateToHostTab(4),
+            ),
+            ListTile(
+              leading: const Icon(Icons.family_restroom_rounded),
+              title: const Text('Child Assignments'),
+              onTap: () => _navigateToHostTab(5),
             ),
             ListTile(
               leading: const Icon(Icons.settings_outlined),
@@ -208,6 +231,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               label: 'ANALYTICS',
             ),
             BottomNavigationBarItem(
+              icon: Icon(Icons.assignment_outlined),
+              activeIcon: Icon(Icons.assignment_rounded),
+              label: 'REQUESTS',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.verified_user_outlined),
               activeIcon: Icon(Icons.verified_user_rounded),
               label: 'VERIFICATION',
@@ -222,6 +250,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               activeIcon: Icon(Icons.description_rounded),
               label: 'REPORTS',
             ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.family_restroom_outlined),
+              activeIcon: Icon(Icons.family_restroom_rounded),
+              label: 'ASSIGNED',
+            ),
           ],
         ),
       ),
@@ -231,9 +264,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildHostSwitchChips() {
     final items = [
       (label: 'Analytics', icon: Icons.bar_chart_rounded),
+      (label: 'Mother Requests', icon: Icons.assignment_rounded),
       (label: 'Verification', icon: Icons.verified_user_rounded),
       (label: 'Risk Analysis', icon: Icons.psychology_rounded),
       (label: 'Reports', icon: Icons.description_rounded),
+      (label: 'Assignments', icon: Icons.family_restroom_rounded),
     ];
 
     return Container(

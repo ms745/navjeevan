@@ -7,6 +7,8 @@ import '../../core/theme/text_styles.dart';
 import '../../core/widgets/error_popup.dart';
 import '../../providers/auth_provider.dart';
 
+enum _MotherAuthAction { none, login, google, register }
+
 class MotherAuthScreen extends StatefulWidget {
   const MotherAuthScreen({super.key});
 
@@ -17,20 +19,22 @@ class MotherAuthScreen extends StatefulWidget {
 class _MotherAuthScreenState extends State<MotherAuthScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  bool _isAuthActionInProgress = false;
+  _MotherAuthAction _activeAuthAction = _MotherAuthAction.none;
+  bool _obscureLoginPassword = true;
+  bool _obscureRegisterPassword = true;
 
   final TextEditingController _loginPhoneController = TextEditingController(
-    text: '9876543210',
+    text: '9876512345',
   );
   final TextEditingController _loginPinController = TextEditingController(
     text: '1234',
   );
 
   final TextEditingController _registerNameController = TextEditingController(
-    text: 'Anita Sharma',
+    text: 'Ananya Patil',
   );
   final TextEditingController _registerPhoneController = TextEditingController(
-    text: '9876543210',
+    text: '9876512345',
   );
   final TextEditingController _registerLocationController =
       TextEditingController(text: 'Hadapsar, Pune');
@@ -56,16 +60,22 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
     super.dispose();
   }
 
-  Future<void> _runAuthAction(Future<void> Function() action) async {
+  bool get _isAuthActionInProgress =>
+      _activeAuthAction != _MotherAuthAction.none;
+
+  Future<void> _runAuthAction(
+    Future<void> Function() action,
+    _MotherAuthAction authAction,
+  ) async {
     if (_isAuthActionInProgress) {
       return;
     }
-    setState(() => _isAuthActionInProgress = true);
+    setState(() => _activeAuthAction = authAction);
     try {
       await action();
     } finally {
       if (mounted) {
-        setState(() => _isAuthActionInProgress = false);
+        setState(() => _activeAuthAction = _MotherAuthAction.none);
       }
     }
   }
@@ -266,8 +276,10 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
   }
 
   Widget _buildLoginCard() {
-    final isLoading =
+    final isActionRunning =
         context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
+    final isLoginLoading = _activeAuthAction == _MotherAuthAction.login;
+    final isGoogleLoading = _activeAuthAction == _MotherAuthAction.google;
     return _buildAuthCard(
       children: [
         Text('Secure Login', style: NavJeevanTextStyles.headlineMedium),
@@ -290,11 +302,21 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
         TextField(
           controller: _loginPinController,
           keyboardType: TextInputType.visiblePassword,
-          obscureText: true,
-          decoration: const InputDecoration(
+          obscureText: _obscureLoginPassword,
+          decoration: InputDecoration(
             labelText: 'Password',
             hintText: 'Enter secure password',
-            prefixIcon: Icon(Icons.lock_outline),
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+              onPressed: () {
+                setState(() {
+                  _obscureLoginPassword = !_obscureLoginPassword;
+                });
+              },
+              icon: Icon(
+                _obscureLoginPassword ? Icons.visibility_off : Icons.visibility,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -318,10 +340,16 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: isLoading
+            onPressed: isLoginLoading
                 ? null
-                : () => _runAuthAction(_continueToMotherFlow),
-            child: isLoading
+                : () {
+                    if (isActionRunning) return;
+                    _runAuthAction(
+                      _continueToMotherFlow,
+                      _MotherAuthAction.login,
+                    );
+                  },
+            child: isLoginLoading
                 ? const SizedBox(
                     height: 18,
                     width: 18,
@@ -334,17 +362,25 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: isLoading
+            onPressed: isGoogleLoading
                 ? null
-                : () => _runAuthAction(_continueMotherWithGoogle),
-            icon: isLoading
+                : () {
+                    if (isActionRunning) return;
+                    _runAuthAction(
+                      _continueMotherWithGoogle,
+                      _MotherAuthAction.google,
+                    );
+                  },
+            icon: isGoogleLoading
                 ? const SizedBox(
                     height: 18,
                     width: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.g_mobiledata_rounded, size: 24),
-            label: Text(isLoading ? 'Please wait...' : 'Continue with Google'),
+            label: Text(
+              isGoogleLoading ? 'Please wait...' : 'Continue with Google',
+            ),
           ),
         ),
       ],
@@ -352,8 +388,9 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
   }
 
   Widget _buildRegisterCard() {
-    final isLoading =
+    final isActionRunning =
         context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
+    final isRegisterLoading = _activeAuthAction == _MotherAuthAction.register;
     return _buildAuthCard(
       children: [
         Text('Quick Registration', style: NavJeevanTextStyles.headlineMedium),
@@ -394,19 +431,39 @@ class _MotherAuthScreenState extends State<MotherAuthScreen>
         TextField(
           controller: _registerPinController,
           keyboardType: TextInputType.visiblePassword,
-          obscureText: true,
-          decoration: const InputDecoration(
+          obscureText: _obscureRegisterPassword,
+          decoration: InputDecoration(
             labelText: 'Set Password',
             hintText: 'Enter secure password',
-            prefixIcon: Icon(Icons.lock_outline),
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+              onPressed: () {
+                setState(() {
+                  _obscureRegisterPassword = !_obscureRegisterPassword;
+                });
+              },
+              icon: Icon(
+                _obscureRegisterPassword
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 22),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: isLoading ? null : () => _runAuthAction(_registerMother),
-            child: isLoading
+            onPressed: isRegisterLoading
+                ? null
+                : () {
+                    if (isActionRunning) return;
+                    _runAuthAction(
+                      _registerMother,
+                      _MotherAuthAction.register,
+                    );
+                  },
+            child: isRegisterLoading
                 ? const SizedBox(
                     height: 18,
                     width: 18,

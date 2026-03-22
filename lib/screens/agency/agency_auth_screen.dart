@@ -6,6 +6,8 @@ import '../../core/theme/parent_colors.dart';
 import '../../core/widgets/error_popup.dart';
 import '../../providers/auth_provider.dart';
 
+enum _AgencyAuthAction { none, login, google, register }
+
 class AgencyAuthScreen extends StatefulWidget {
   const AgencyAuthScreen({super.key});
 
@@ -16,20 +18,23 @@ class AgencyAuthScreen extends StatefulWidget {
 class _AgencyAuthScreenState extends State<AgencyAuthScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  bool _isAuthActionInProgress = false;
+  _AgencyAuthAction _activeAuthAction = _AgencyAuthAction.none;
+  bool _obscureLoginPassword = true;
+  bool _obscureRegisterPassword = true;
   final TextEditingController _loginIdController = TextEditingController(
-    text: 'NGO101',
+    text: 'ngo.operations@navjeevan.app',
   );
   final TextEditingController _loginPinController = TextEditingController(
-    text: '1234',
+    text: 'Agency@123',
   );
-  final TextEditingController _registerOrgController = TextEditingController();
+  final TextEditingController _registerOrgController =
+      TextEditingController(text: 'NavJeevan Care Foundation');
   final TextEditingController _registerNumberController =
-      TextEditingController();
+      TextEditingController(text: 'RN-2026-104');
   final TextEditingController _registerEmailController =
-      TextEditingController();
+      TextEditingController(text: 'ngo.operations@navjeevan.app');
   final TextEditingController _registerPasswordController =
-      TextEditingController();
+      TextEditingController(text: 'Agency@123');
 
   @override
   void initState() {
@@ -54,16 +59,22 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
     super.dispose();
   }
 
-  Future<void> _runAuthAction(Future<void> Function() action) async {
+  bool get _isAuthActionInProgress =>
+      _activeAuthAction != _AgencyAuthAction.none;
+
+  Future<void> _runAuthAction(
+    Future<void> Function() action,
+    _AgencyAuthAction authAction,
+  ) async {
     if (_isAuthActionInProgress) {
       return;
     }
-    setState(() => _isAuthActionInProgress = true);
+    setState(() => _activeAuthAction = authAction);
     try {
       await action();
     } finally {
       if (mounted) {
-        setState(() => _isAuthActionInProgress = false);
+        setState(() => _activeAuthAction = _AgencyAuthAction.none);
       }
     }
   }
@@ -284,8 +295,10 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
   }
 
   Widget _buildLoginCard() {
-    final isLoading =
+    final isActionRunning =
         context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
+    final isLoginLoading = _activeAuthAction == _AgencyAuthAction.login;
+    final isGoogleLoading = _activeAuthAction == _AgencyAuthAction.google;
     return SingleChildScrollView(
       child: Container(
         padding: const EdgeInsets.all(18),
@@ -327,32 +340,51 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
             TextField(
               controller: _loginIdController,
               decoration: const InputDecoration(
-                labelText: 'Agency / NGO ID',
+                labelText: 'Registration Number / Email',
+                hintText: 'Enter NGO registration number or official email',
                 prefixIcon: Icon(Icons.badge_outlined),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _loginPinController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Secure PIN',
-                prefixIcon: Icon(Icons.lock_outline),
+              obscureText: _obscureLoginPassword,
+              decoration: InputDecoration(
+                labelText: 'Password / PIN',
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _obscureLoginPassword = !_obscureLoginPassword;
+                    });
+                  },
+                  icon: Icon(
+                    _obscureLoginPassword
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: isLoading
+                onPressed: isLoginLoading
                     ? null
-                    : () => _runAuthAction(_enterAgencySystem),
+                    : () {
+                        if (isActionRunning) return;
+                        _runAuthAction(
+                          _enterAgencySystem,
+                          _AgencyAuthAction.login,
+                        );
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ParentThemeColors.primaryBlue,
                   foregroundColor: ParentThemeColors.pureWhite,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: isLoading
+                child: isLoginLoading
                     ? const SizedBox(
                         height: 18,
                         width: 18,
@@ -370,16 +402,22 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: isLoading
+                onPressed: isGoogleLoading
                     ? null
-                    : () => _runAuthAction(_continueAgencyWithGoogle),
+                    : () {
+                        if (isActionRunning) return;
+                        _runAuthAction(
+                          _continueAgencyWithGoogle,
+                          _AgencyAuthAction.google,
+                        );
+                      },
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   side: BorderSide(
                     color: ParentThemeColors.primaryBlue.withValues(alpha: 0.3),
                   ),
                 ),
-                icon: isLoading
+                icon: isGoogleLoading
                     ? const SizedBox(
                         height: 18,
                         width: 18,
@@ -387,7 +425,7 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
                       )
                     : const Icon(Icons.g_mobiledata_rounded, size: 24),
                 label: Text(
-                  isLoading ? 'Please wait...' : 'Continue with Google',
+                  isGoogleLoading ? 'Please wait...' : 'Continue with Google',
                 ),
               ),
             ),
@@ -398,8 +436,9 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
   }
 
   Widget _buildRegisterCard() {
-    final isLoading =
+    final isActionRunning =
         context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
+    final isRegisterLoading = _activeAuthAction == _AgencyAuthAction.register;
     return SingleChildScrollView(
       child: Container(
         padding: const EdgeInsets.all(18),
@@ -464,25 +503,43 @@ class _AgencyAuthScreenState extends State<AgencyAuthScreen>
             const SizedBox(height: 12),
             TextField(
               controller: _registerPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
+              obscureText: _obscureRegisterPassword,
+              decoration: InputDecoration(
                 labelText: 'Set Password',
-                prefixIcon: Icon(Icons.lock_outline),
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _obscureRegisterPassword = !_obscureRegisterPassword;
+                    });
+                  },
+                  icon: Icon(
+                    _obscureRegisterPassword
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: isLoading
+                onPressed: isRegisterLoading
                     ? null
-                    : () => _runAuthAction(_registerAgency),
+                    : () {
+                        if (isActionRunning) return;
+                        _runAuthAction(
+                          _registerAgency,
+                          _AgencyAuthAction.register,
+                        );
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ParentThemeColors.primaryBlue,
                   foregroundColor: ParentThemeColors.pureWhite,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: isLoading
+                child: isRegisterLoading
                     ? const SizedBox(
                         height: 18,
                         width: 18,

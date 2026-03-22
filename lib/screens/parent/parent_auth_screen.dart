@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/route_names.dart';
+import '../../core/services/firebase_service.dart';
 import '../../core/theme/parent_colors.dart';
 import '../../core/widgets/error_popup.dart';
 import '../../providers/auth_provider.dart';
+
+enum _ParentAuthAction { none, login, google, register }
 
 class ParentAuthScreen extends StatefulWidget {
   const ParentAuthScreen({super.key});
@@ -16,16 +20,18 @@ class ParentAuthScreen extends StatefulWidget {
 class _ParentAuthScreenState extends State<ParentAuthScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  bool _isAuthActionInProgress = false;
+  _ParentAuthAction _activeAuthAction = _ParentAuthAction.none;
+  bool _obscureLoginPassword = true;
+  bool _obscureRegisterPassword = true;
 
   final TextEditingController _loginPhoneController = TextEditingController(
-    text: '9876509999',
+    text: '9876501234',
   );
   final TextEditingController _loginPinController = TextEditingController(
     text: '1234',
   );
   final TextEditingController _registerPhoneController = TextEditingController(
-    text: '9876509999',
+    text: '9876501234',
   );
   final TextEditingController _registerPinController = TextEditingController(
     text: '1234',
@@ -47,16 +53,22 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
     super.dispose();
   }
 
-  Future<void> _runAuthAction(Future<void> Function() action) async {
+  bool get _isAuthActionInProgress =>
+      _activeAuthAction != _ParentAuthAction.none;
+
+  Future<void> _runAuthAction(
+    Future<void> Function() action,
+    _ParentAuthAction authAction,
+  ) async {
     if (_isAuthActionInProgress) {
       return;
     }
-    setState(() => _isAuthActionInProgress = true);
+    setState(() => _activeAuthAction = authAction);
     try {
       await action();
     } finally {
       if (mounted) {
-        setState(() => _isAuthActionInProgress = false);
+        setState(() => _activeAuthAction = _ParentAuthAction.none);
       }
     }
   }
@@ -66,6 +78,10 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
     final password = _loginPinController.text.trim();
     if (phone.isEmpty || password.isEmpty) {
       showErrorBottomPopup(context, 'Enter phone and password.');
+      return;
+    }
+    if (!_isValidPhone(phone)) {
+      showErrorBottomPopup(context, 'Phone number must be exactly 10 digits.');
       return;
     }
 
@@ -94,6 +110,10 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
       showErrorBottomPopup(context, 'Enter phone and password to register.');
       return;
     }
+    if (!_isValidPhone(phone)) {
+      showErrorBottomPopup(context, 'Phone number must be exactly 10 digits.');
+      return;
+    }
 
     try {
       await context.read<AuthProvider>().registerWithPhonePin(
@@ -104,6 +124,26 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
       if (!mounted) {
         return;
       }
+
+      final canStartNewRequest =
+          await FirebaseService.instance.canStartNewParentAdoptionRequest();
+      if (!mounted) {
+        return;
+      }
+
+      if (!canStartNewRequest) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'You already have an active adoption process. New request is available after the current process is completed.',
+            ),
+            backgroundColor: ParentThemeColors.warningOrange,
+          ),
+        );
+        context.push(NavJeevanRoutes.parentVerificationStatus);
+        return;
+      }
+
       context.push(NavJeevanRoutes.parentRegistrationWizard);
     } catch (error) {
       if (!mounted) {
@@ -130,6 +170,8 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
       showErrorBottomPopup(context, 'Parent Google login failed: $error');
     }
   }
+
+  bool _isValidPhone(String value) => RegExp(r'^\d{10}$').hasMatch(value);
 
   @override
   Widget build(BuildContext context) {
@@ -307,8 +349,10 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
   }
 
   Widget _buildLoginCard() {
-    final isLoading =
+    final isActionRunning =
         context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
+    final isLoginLoading = _activeAuthAction == _ParentAuthAction.login;
+    final isGoogleLoading = _activeAuthAction == _ParentAuthAction.google;
     return _buildAuthCard(
       children: [
         const Text(
@@ -328,6 +372,11 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
         TextField(
           controller: _loginPhoneController,
           keyboardType: TextInputType.phone,
+          maxLength: 10,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
+          ],
           decoration: InputDecoration(
             labelText: 'Phone Number',
             hintText: 'Enter 10-digit number',
@@ -354,13 +403,26 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
         TextField(
           controller: _loginPinController,
           keyboardType: TextInputType.visiblePassword,
-          obscureText: true,
+          obscureText: _obscureLoginPassword,
           decoration: InputDecoration(
             labelText: 'Password',
             hintText: 'Enter secure password',
             prefixIcon: Icon(
               Icons.lock_outline,
               color: ParentThemeColors.primaryBlue,
+            ),
+            suffixIcon: IconButton(
+              onPressed: () {
+                setState(() {
+                  _obscureLoginPassword = !_obscureLoginPassword;
+                });
+              },
+              icon: Icon(
+                _obscureLoginPassword
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+                color: ParentThemeColors.primaryBlue,
+              ),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -414,9 +476,15 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: isLoading
+            onPressed: isLoginLoading
                 ? null
-                : () => _runAuthAction(_continueToParentFlow),
+                : () {
+                    if (isActionRunning) return;
+                    _runAuthAction(
+                      _continueToParentFlow,
+                      _ParentAuthAction.login,
+                    );
+                  },
             style: ElevatedButton.styleFrom(
               backgroundColor: ParentThemeColors.primaryBlue,
               foregroundColor: ParentThemeColors.pureWhite,
@@ -425,7 +493,7 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
               ),
               elevation: 4,
             ),
-            child: isLoading
+            child: isLoginLoading
                 ? const SizedBox(
                     height: 18,
                     width: 18,
@@ -446,20 +514,28 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: isLoading
+            onPressed: isGoogleLoading
                 ? null
-                : () => _runAuthAction(_continueParentWithGoogle),
+                : () {
+                    if (isActionRunning) return;
+                    _runAuthAction(
+                      _continueParentWithGoogle,
+                      _ParentAuthAction.google,
+                    );
+                  },
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-            icon: isLoading
+            icon: isGoogleLoading
                 ? const SizedBox(
                     height: 18,
                     width: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.g_mobiledata_rounded, size: 24),
-            label: Text(isLoading ? 'Please wait...' : 'Continue with Google'),
+            label: Text(
+              isGoogleLoading ? 'Please wait...' : 'Continue with Google',
+            ),
           ),
         ),
       ],
@@ -467,8 +543,9 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
   }
 
   Widget _buildRegisterCard() {
-    final isLoading =
+    final isActionRunning =
         context.watch<AuthProvider>().isLoading || _isAuthActionInProgress;
+    final isRegisterLoading = _activeAuthAction == _ParentAuthAction.register;
     return _buildAuthCard(
       children: [
         const Text(
@@ -506,6 +583,11 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
         TextField(
           controller: _registerPhoneController,
           keyboardType: TextInputType.phone,
+          maxLength: 10,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
+          ],
           decoration: InputDecoration(
             labelText: 'Phone Number',
             hintText: 'Enter 10-digit number',
@@ -532,13 +614,26 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
         TextField(
           controller: _registerPinController,
           keyboardType: TextInputType.visiblePassword,
-          obscureText: true,
+          obscureText: _obscureRegisterPassword,
           decoration: InputDecoration(
             labelText: 'Set Password',
             hintText: 'Create secure password',
             prefixIcon: Icon(
               Icons.lock_outline,
               color: ParentThemeColors.primaryBlue,
+            ),
+            suffixIcon: IconButton(
+              onPressed: () {
+                setState(() {
+                  _obscureRegisterPassword = !_obscureRegisterPassword;
+                });
+              },
+              icon: Icon(
+                _obscureRegisterPassword
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+                color: ParentThemeColors.primaryBlue,
+              ),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -560,9 +655,15 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: isLoading
+            onPressed: isRegisterLoading
                 ? null
-                : () => _runAuthAction(_startRegistration),
+                : () {
+                    if (isActionRunning) return;
+                    _runAuthAction(
+                      _startRegistration,
+                      _ParentAuthAction.register,
+                    );
+                  },
             style: ElevatedButton.styleFrom(
               backgroundColor: ParentThemeColors.primaryBlue,
               foregroundColor: ParentThemeColors.pureWhite,
@@ -571,7 +672,7 @@ class _ParentAuthScreenState extends State<ParentAuthScreen>
               ),
               elevation: 4,
             ),
-            child: isLoading
+            child: isRegisterLoading
                 ? const SizedBox(
                     height: 18,
                     width: 18,

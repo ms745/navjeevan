@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/constants/route_names.dart';
+import '../../core/services/firebase_service.dart';
 import '../../core/widgets/error_popup.dart';
 
 class NgoSupportMapScreen extends StatefulWidget {
@@ -158,7 +159,25 @@ class _NgoSupportMapScreenState extends State<NgoSupportMapScreen> {
     );
   }
 
-  Future<void> _callCenter(String contactNumber) async {
+  Future<void> _callCenter(Map<String, dynamic> center) async {
+    final String contactNumber = (center['contact'] as String? ?? '').trim();
+    if (contactNumber.isEmpty) {
+      if (mounted) {
+        showErrorBottomPopup(context, 'Contact number is unavailable.');
+      }
+      return;
+    }
+
+    try {
+      await FirebaseService.instance.logNgoContactCall(
+        ngoId: (center['ngoId'] as String? ?? 'unknown').trim(),
+        ngoName: (center['name'] as String? ?? 'Unknown NGO').trim(),
+        contact: contactNumber,
+        source: 'mother_ngo_map_call',
+      );
+    } catch (_) {
+      // Logging should not block dialing.
+    }
     final String sanitized = contactNumber.replaceAll(RegExp(r'\s+'), '');
     final Uri uri = Uri(scheme: 'tel', path: sanitized);
     if (await canLaunchUrl(uri)) {
@@ -474,7 +493,7 @@ class _NgoSupportMapScreenState extends State<NgoSupportMapScreen> {
             Align(
               alignment: Alignment.centerLeft,
               child: GestureDetector(
-                onTap: () => _callCenter(center['contact'] as String),
+                onTap: () => _callCenter(center),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -612,7 +631,7 @@ class _NgoSupportMapScreenState extends State<NgoSupportMapScreen> {
                   ),
                   const SizedBox(height: 8),
                   GestureDetector(
-                    onTap: () => _callCenter(center['contact'] as String),
+                    onTap: () => _callCenter(center),
                     child: Container(
                       height: 36,
                       width: 36,

@@ -8,6 +8,7 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+
 val mapsApiKeyFromGradle = (project.findProperty("MAPS_API_KEY") as String?)?.trim().orEmpty()
 val mapsApiKeyFromEnv = System.getenv("MAPS_API_KEY")?.trim().orEmpty()
 val resolvedMapsApiKey = mapsApiKeyFromGradle.ifEmpty {

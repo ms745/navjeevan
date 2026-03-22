@@ -6,7 +6,9 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
+  );
 
   User? _user;
   String? _userRole;
@@ -94,7 +96,10 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     required String expectedRole,
   }) async {
-    final normalizedEmail = _normalizeIdentifierToEmail(identifier);
+    final normalizedEmail = await _resolveIdentifierToEmail(
+      identifier: identifier,
+      expectedRole: expectedRole,
+    );
     await loginWithEmail(email: normalizedEmail, password: password);
 
     final role = await _resolveRoleAndBackfill(expectedRole: expectedRole);
@@ -105,6 +110,37 @@ class AuthProvider extends ChangeNotifier {
         message: 'Account does not have $expectedRole access.',
       );
     }
+  }
+
+  Future<String> _resolveIdentifierToEmail({
+    required String identifier,
+    required String expectedRole,
+  }) async {
+    final normalized = identifier.trim();
+    if (normalized.contains('@')) {
+      return normalized.toLowerCase();
+    }
+
+    if (expectedRole == 'agency') {
+      try {
+        final match = await _db
+            .collection('users')
+            .where('role', isEqualTo: 'agency')
+            .where('profile.registrationNumber', isEqualTo: normalized)
+            .limit(1)
+            .get();
+
+        if (match.docs.isNotEmpty) {
+          final data = match.docs.first.data();
+          final email = (data['email'] ?? '').toString().trim().toLowerCase();
+          if (email.isNotEmpty) {
+            return email;
+          }
+        }
+      } catch (_) {}
+    }
+
+    return _normalizeIdentifierToEmail(normalized);
   }
 
   Future<void> loginWithPhonePin({
@@ -272,6 +308,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     await _auth.signOut();
+    await _googleSignIn.signOut();
   }
 
   // Helper for demo/testing
